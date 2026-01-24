@@ -3,7 +3,7 @@ main = "worker.js"
 compatibility_date = "2024-01-01"
 
 # Account ID - uncomment and fill in after running `wrangler whoami`
-# account_id = "your-account-id-here"
+account_id = "798af01dfedaeef779f0f74ccf6d9e6a"
 
 # Environment variables (non-secret)
 [vars]
