@@ -1453,6 +1453,456 @@ const App = {
         });
     },
 
+    // ========================================
+    // AI FEATURE UI HELPERS
+    // ========================================
+
+    /**
+     * Show AI modal with content
+     */
+    showAIModal(title, content, footer = '') {
+        // Remove existing modal
+        document.querySelector('.ai-modal')?.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'ai-modal';
+        modal.innerHTML = `
+            <div class="ai-modal-content glass">
+                <div class="ai-modal-header">
+                    <h3>✨ ${title}</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="ai-modal-body">
+                    ${content}
+                </div>
+                ${footer ? `<div class="ai-modal-footer">${footer}</div>` : ''}
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close handlers
+        modal.querySelector('.close-btn').addEventListener('click', () => this.closeAIModal());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.closeAIModal();
+        });
+
+        return modal;
+    },
+
+    /**
+     * Close AI modal
+     */
+    closeAIModal() {
+        document.querySelector('.ai-modal')?.remove();
+    },
+
+    /**
+     * Show AI loading modal
+     */
+    showAILoading(title) {
+        return this.showAIModal(title, `
+            <div class="ai-loading">
+                <div class="spinner"></div>
+                <p>AI is thinking...</p>
+            </div>
+        `);
+    },
+
+    /**
+     * Open De-escalation Coach
+     */
+    async openDeescalationCoach() {
+        const student = Session.currentStudent;
+        if (!student) {
+            this.showError('No active session');
+            return;
+        }
+
+        const modal = this.showAILoading('De-escalation Coach');
+
+        const situation = {
+            description: prompt('Briefly describe the situation:') || 'Student is becoming frustrated',
+            currentState: 'Escalating'
+        };
+
+        if (!situation.description) {
+            this.closeAIModal();
+            return;
+        }
+
+        const result = await AI.getDeescalationCoaching(situation, student);
+
+        if (!result) {
+            modal.querySelector('.ai-modal-body').innerHTML = `
+                <div class="ai-unavailable">
+                    <div class="icon">🤖</div>
+                    <p>AI is currently unavailable. Try these steps:</p>
+                    <ul style="text-align:left">
+                        <li>Take a deep breath</li>
+                        <li>Lower your voice and slow down</li>
+                        <li>Ask: "What do you need right now?"</li>
+                        <li>Consider a short break</li>
+                    </ul>
+                </div>
+            `;
+            return;
+        }
+
+        modal.querySelector('.ai-modal-body').innerHTML = `
+            <div class="ai-response-card" style="margin-top: 1.5rem;">
+                <h4>🚨 Immediate Action</h4>
+                <p><strong>${result.immediateAction}</strong></p>
+            </div>
+            
+            <div class="ai-script-item neutral">
+                <div class="tone-label">Say This</div>
+                <p class="script-text">"${result.script}"</p>
+            </div>
+            
+            <div class="insight-item">
+                <div class="icon">🧘</div>
+                <div class="content">
+                    <h4>Breathing Prompt</h4>
+                    <p>${result.breathingPrompt}</p>
+                </div>
+            </div>
+            
+            <div class="insight-item">
+                <div class="icon">🎮</div>
+                <div class="content">
+                    <h4>Activity Suggestion</h4>
+                    <p>${result.activitySuggestion}</p>
+                </div>
+            </div>
+            
+            ${result.dontDo?.length ? `
+            <div class="insight-item">
+                <div class="icon">⚠️</div>
+                <div class="content">
+                    <h4>Avoid Doing</h4>
+                    <ul>${result.dontDo.map(d => `<li>${d}</li>`).join('')}</ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="insight-item">
+                <div class="icon">🔄</div>
+                <div class="content">
+                    <h4>Recovery Plan</h4>
+                    <p>${result.recoveryPlan}</p>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Open Session Prep Briefing
+     */
+    async openPrepBriefing(student) {
+        const modal = this.showAILoading('Session Prep Briefing');
+
+        // Get student's incident history
+        const incidents = await Incidents.getStudentIncidents(student.id);
+        const result = await AI.getSessionPrebriefing(student, incidents);
+
+        if (!result) {
+            modal.querySelector('.ai-modal-body').innerHTML = `
+                <div class="ai-unavailable">
+                    <div class="icon">🤖</div>
+                    <p>AI prep briefing unavailable. No prior incidents to analyze.</p>
+                </div>
+            `;
+            return;
+        }
+
+        modal.querySelector('.ai-modal-body').innerHTML = `
+            <div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}">
+                Risk Level: ${result.riskLevel || 'Low'}
+            </div>
+            
+            ${result.keyPatterns?.length ? `
+            <div class="ai-response-card" style="margin-top: 1.5rem;">
+                <h4>📊 Key Patterns</h4>
+                <ul>${result.keyPatterns.map(p => `<li>${p}</li>`).join('')}</ul>
+            </div>
+            ` : ''}
+            
+            ${result.proactiveStrategies?.length ? `
+            <div class="ai-response-card">
+                <h4>🎯 Proactive Strategies</h4>
+                <ul>${result.proactiveStrategies.map(s => `<li>${s}</li>`).join('')}</ul>
+            </div>
+            ` : ''}
+            
+            ${result.watchTimes?.length ? `
+            <div class="insight-item">
+                <div class="icon">⏰</div>
+                <div class="content">
+                    <h4>Watch Times</h4>
+                    <p>${result.watchTimes.join(', ')}</p>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${result.positiveNotes?.length ? `
+            <div class="insight-item">
+                <div class="icon">✨</div>
+                <div class="content">
+                    <h4>Positive Notes</h4>
+                    <ul>${result.positiveNotes.map(n => `<li>${n}</li>`).join('')}</ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div class="insight-item">
+                <div class="icon">💡</div>
+                <div class="content">
+                    <h4>Suggested Approach</h4>
+                    <p>${result.suggestedApproach || 'Start positive and establish rapport.'}</p>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Open AI Goal Suggestions modal
+     */
+    async openGoalSuggestions(student) {
+        const modal = this.showAILoading('AI Goal Suggestions');
+
+        const incidents = await Incidents.getStudentIncidents(student.id);
+        const result = await AI.suggestGoals(student, incidents.slice(-10), []);
+
+        if (!result) {
+            modal.querySelector('.ai-modal-body').innerHTML = `
+                <div class="ai-unavailable">
+                    <div class="icon">🤖</div>
+                    <p>AI goal suggestions unavailable.</p>
+                </div>
+            `;
+            return;
+        }
+
+        modal.querySelector('.ai-modal-body').innerHTML = `
+            <div class="ai-goals-list">
+                <div class="ai-goal-item primary" onclick="this.classList.toggle('selected')">
+                    <div class="goal-check">✓</div>
+                    <div class="goal-text">
+                        <h4>🎯 ${result.primaryGoal}</h4>
+                        <p>Primary goal for this session</p>
+                    </div>
+                </div>
+                ${result.secondaryGoals?.map(g => `
+                    <div class="ai-goal-item" onclick="this.classList.toggle('selected')">
+                        <div class="goal-check"></div>
+                        <div class="goal-text">
+                            <h4>${g}</h4>
+                        </div>
+                    </div>
+                `).join('') || ''}
+                ${result.microGoals?.map(g => `
+                    <div class="ai-goal-item" onclick="this.classList.toggle('selected')">
+                        <div class="goal-check"></div>
+                        <div class="goal-text">
+                            <h4>⚡ ${g}</h4>
+                            <p>Quick win goal</p>
+                        </div>
+                    </div>
+                `).join('') || ''}
+            </div>
+            
+            ${result.rationale ? `
+            <div class="insight-item" style="margin-top: 1rem;">
+                <div class="icon">💭</div>
+                <div class="content">
+                    <h4>Why These Goals?</h4>
+                    <p>${result.rationale}</p>
+                </div>
+            </div>
+            ` : ''}
+        `;
+
+        modal.querySelector('.ai-modal-footer')?.remove();
+        const footer = document.createElement('div');
+        footer.className = 'ai-modal-footer';
+        footer.innerHTML = `<button class="btn btn-primary" id="applyGoalsBtn">Apply Selected Goals</button>`;
+        modal.querySelector('.ai-modal-content').appendChild(footer);
+
+        footer.querySelector('#applyGoalsBtn').addEventListener('click', () => {
+            const selected = modal.querySelectorAll('.ai-goal-item.selected .goal-text h4');
+            const goals = Array.from(selected).map(el => el.textContent.replace(/^[🎯⚡]\s*/, ''));
+
+            // Update goal inputs
+            goals.slice(0, 3).forEach((goal, i) => {
+                const input = document.getElementById(`goal${i + 1}`);
+                if (input) input.value = goal;
+            });
+
+            this.closeAIModal();
+            this.showSuccess(`${goals.length} goals applied`);
+        });
+    },
+
+    /**
+     * Open Session Summary generator
+     */
+    async openSessionSummary() {
+        const summary = await Session.getSessionSummary();
+        if (!summary) {
+            this.showError('No active session');
+            return;
+        }
+
+        const modal = this.showAILoading('Session Summary Generator');
+
+        const student = Session.currentStudent;
+        const incidents = summary.incidents || [];
+        const result = await AI.generateSessionSummary(summary, student, incidents);
+
+        if (!result) {
+            modal.querySelector('.ai-modal-body').innerHTML = `
+                <div class="ai-unavailable">
+                    <div class="icon">🤖</div>
+                    <p>AI summary generation unavailable.</p>
+                </div>
+            `;
+            return;
+        }
+
+        modal.querySelector('.ai-modal-body').innerHTML = `
+            <div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}">
+                Session Rating: ${result.overallRating?.charAt(0).toUpperCase() + result.overallRating?.slice(1)}
+            </div>
+            
+            <div class="ai-response-card" style="margin-top: 1.5rem;">
+                <h4>📋 Summary</h4>
+                <p>${result.summary}</p>
+            </div>
+            
+            ${result.positiveHighlights?.length ? `
+            <div class="insight-item">
+                <div class="icon">✨</div>
+                <div class="content">
+                    <h4>Positive Highlights</h4>
+                    <ul>${result.positiveHighlights.map(h => `<li>${h}</li>`).join('')}</ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${result.recommendationsForNextSession?.length ? `
+            <div class="insight-item">
+                <div class="icon">📝</div>
+                <div class="content">
+                    <h4>For Next Session</h4>
+                    <ul>${result.recommendationsForNextSession.map(r => `<li>${r}</li>`).join('')}</ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${result.parentFriendlyVersion ? `
+            <div class="ai-response-card">
+                <h4>👨‍👩‍👧 Parent-Friendly Version</h4>
+                <p style="font-style: italic;">${result.parentFriendlyVersion}</p>
+                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.parentFriendlyVersion.replace(/'/g, "\\'")}'); this.textContent='Copied!'">📋 Copy</button>
+            </div>
+            ` : ''}
+        `;
+    },
+
+    /**
+     * Open Pattern Insights
+     */
+    async openPatternInsights() {
+        const modal = this.showAILoading('AI Pattern Insights');
+
+        const incidents = await DB.getAllIncidents();
+        const result = await AI.getPatternInsights(incidents, 30);
+
+        if (!result) {
+            modal.querySelector('.ai-modal-body').innerHTML = `
+                <div class="ai-unavailable">
+                    <div class="icon">🤖</div>
+                    <p>AI pattern analysis unavailable or insufficient data.</p>
+                </div>
+            `;
+            return;
+        }
+
+        modal.querySelector('.ai-modal-body').innerHTML = `
+            <div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}">
+                Trend: ${result.overallTrend?.charAt(0).toUpperCase() + result.overallTrend?.slice(1)}
+            </div>
+            
+            <p style="margin: 1rem 0;">${result.trendSummary}</p>
+            
+            ${result.topCategories?.length ? `
+            <div class="ai-response-card">
+                <h4>📊 Top Categories</h4>
+                <div class="ai-predictions">
+                    ${result.topCategories.map(c => `
+                        <div class="prediction-item ${c.trend === 'up' ? 'high' : c.trend === 'down' ? 'low' : 'medium'}">
+                            <span class="category">${c.category}</span>
+                            <span class="percentage">${c.count} incidents (${c.trend})</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
+            
+            ${result.improvingAreas?.length ? `
+            <div class="insight-item">
+                <div class="icon">📈</div>
+                <div class="content">
+                    <h4>Improving Areas</h4>
+                    <ul>${result.improvingAreas.map(a => `<li>${a}</li>`).join('')}</ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${result.concerningPatterns?.length ? `
+            <div class="insight-item">
+                <div class="icon">⚠️</div>
+                <div class="content">
+                    <h4>Concerning Patterns</h4>
+                    <ul>${result.concerningPatterns.map(p => `<li>${p}</li>`).join('')}</ul>
+                </div>
+            </div>
+            ` : ''}
+            
+            ${result.methodologyAdjustments?.length ? `
+            <div class="ai-response-card">
+                <h4>💡 Suggested Adjustments</h4>
+                <ul>${result.methodologyAdjustments.map(a => `<li>${a}</li>`).join('')}</ul>
+            </div>
+            ` : ''}
+        `;
+    },
+
+    /**
+     * Show floating de-escalation coach button during session
+     */
+    showDeescalationCoachButton() {
+        // Remove existing
+        document.getElementById('deescalationCoachBtn')?.remove();
+
+        const btn = document.createElement('button');
+        btn.id = 'deescalationCoachBtn';
+        btn.className = 'deescalation-coach-btn';
+        btn.innerHTML = '🧘';
+        btn.title = 'De-escalation Coach';
+        btn.addEventListener('click', () => this.openDeescalationCoach());
+
+        document.body.appendChild(btn);
+    },
+
+    /**
+     * Hide floating de-escalation coach button
+     */
+    hideDeescalationCoachButton() {
+        document.getElementById('deescalationCoachBtn')?.remove();
+    },
+
     /**
      * Show success toast
      */

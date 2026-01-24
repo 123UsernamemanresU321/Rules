@@ -79,6 +79,165 @@ You MUST respond with valid JSON only, matching this exact structure:
 Do not include any text before or after the JSON object.`;
 
 /**
+ * AI Feature Prompts - prompts for each AI feature
+ */
+const AI_PROMPTS = {
+    // Session Prep Briefing
+    'prep-briefing': `You are an expert educational advisor preparing a tutor for a session.
+
+Based on the student's incident history and patterns, provide a pre-session briefing.
+
+Respond with JSON:
+{
+  "riskLevel": "low|medium|high",
+  "keyPatterns": ["pattern 1", "pattern 2"],
+  "likelyIssues": ["issue 1", "issue 2"],
+  "proactiveStrategies": ["strategy 1", "strategy 2"],
+  "positiveNotes": ["positive observation 1"],
+  "watchTimes": ["After 15 minutes focus may drop"],
+  "suggestedApproach": "brief overall approach recommendation"
+}`,
+
+    // Smart Incident Description
+    'generate-description': `You are helping a tutor document an incident objectively and concisely.
+
+Based on the incident category, severity, and context, generate a brief, objective incident description.
+
+Respond with JSON:
+{
+  "description": "2-3 sentence objective description of the incident",
+  "alternateDescriptions": ["alternative wording 1", "alternative wording 2"]
+}`,
+
+    // De-escalation Coach
+    'deescalation-coach': `You are a real-time de-escalation coach for tutors. The tutor needs IMMEDIATE, practical guidance.
+
+Be concise and actionable. This is a tense moment.
+
+Respond with JSON:
+{
+  "immediateAction": "what to do RIGHT NOW (1 sentence)",
+  "breathingPrompt": "quick breathing or grounding technique",
+  "script": "exact words to say to the student",
+  "bodyLanguage": "physical positioning advice",
+  "activitySuggestion": "quick activity to defuse tension",
+  "dontDo": ["thing to avoid 1", "thing to avoid 2"],
+  "recoveryPlan": "how to recover the session after de-escalation"
+}`,
+
+    // Session Summary Generator
+    'session-summary': `You are generating a professional session summary for tutor records and parent communication.
+
+Summarize the session balanced, highlighting both challenges and positives.
+
+Respond with JSON:
+{
+  "overallRating": "excellent|good|challenging|difficult",
+  "summary": "2-3 paragraph professional summary",
+  "incidentSummary": "brief summary of any incidents",
+  "positiveHighlights": ["positive 1", "positive 2"],
+  "areasForImprovement": ["area 1"],
+  "recommendationsForNextSession": ["recommendation 1"],
+  "parentFriendlyVersion": "1 paragraph version suitable for parents"
+}`,
+
+    // Pattern Insights
+    'pattern-insights': `You are an educational data analyst identifying behavior patterns across sessions.
+
+Analyze the incident history and provide actionable insights.
+
+Respond with JSON:
+{
+  "overallTrend": "improving|stable|concerning",
+  "trendSummary": "1-2 sentence trend description",
+  "topCategories": [{"category": "name", "count": 0, "trend": "up|down|stable"}],
+  "peakProblemTimes": ["time pattern 1"],
+  "improvingAreas": ["area 1"],
+  "concerningPatterns": ["pattern 1"],
+  "methodologyAdjustments": ["suggestion 1"],
+  "crossStudentInsights": "any patterns across multiple students"
+}`,
+
+    // Custom Script Generator
+    'generate-script': `You are an expert at crafting age-appropriate discipline scripts for tutors.
+
+Generate scripts that are respectful, clear, and effective for the specific situation.
+
+Respond with JSON:
+{
+  "gentle": "script for gentle approach",
+  "neutral": "script for neutral approach",
+  "firm": "script for firm approach",
+  "followUp": "script for following up later",
+  "parentVersion": "how to explain to parent if needed",
+  "tips": ["delivery tip 1", "delivery tip 2"]
+}`,
+
+    // Parent Email Drafter
+    'draft-email': `You are drafting a professional parent/guardian communication about tutoring session incidents.
+
+The email should be professional, non-blaming, and solution-focused.
+
+Respond with JSON:
+{
+  "subject": "email subject line",
+  "informational": "full email in informational tone",
+  "concerned": "full email in concerned tone",
+  "positive": "full email highlighting positives while addressing issues",
+  "callToAction": "suggested next steps for parent",
+  "doNotInclude": ["things to avoid mentioning"]
+}`,
+
+    // Goal Suggestions
+    'suggest-goals': `You are helping set achievable behavioral goals for a tutoring session.
+
+Based on the student's history, suggest specific, measurable goals.
+
+Respond with JSON:
+{
+  "primaryGoal": "main goal for this session",
+  "secondaryGoals": ["goal 2", "goal 3"],
+  "measurableCriteria": ["how to measure success 1"],
+  "microGoals": ["small achievable goal for first 10 min"],
+  "rewardSuggestion": "appropriate positive reinforcement",
+  "rationale": "why these goals were chosen"
+}`,
+
+    // Behavior Prediction
+    'predict-behavior': `You are predicting likely behavior patterns for an upcoming or current session.
+
+Be probabilistic and helpful, not alarming.
+
+Respond with JSON:
+{
+  "overallRisk": "low|moderate|elevated",
+  "predictions": [
+    {"category": "FOCUS_OFF_TASK", "likelihood": 0.0-1.0, "peakTime": "when most likely", "triggers": ["trigger 1"]}
+  ],
+  "protectiveFactors": ["factor that reduces risk"],
+  "proactiveMeasures": ["what to do to prevent issues"],
+  "earlyWarningSign": "what to watch for"
+}`,
+
+    // Resolution Advisor
+    'resolution-steps': `You are advising on how to resolve a specific incident and prevent recurrence.
+
+Provide a concrete step-by-step plan.
+
+Respond with JSON:
+{
+  "immediateResolution": ["step 1", "step 2", "step 3"],
+  "sameSessionFollowUp": "what to do later in this session",
+  "nextSessionFollowUp": "what to do at start of next session",
+  "preventionPlan": ["strategy to prevent recurrence 1"],
+  "parentInvolvement": "whether/how to involve parent",
+  "successIndicators": ["how to know it's resolved"],
+  "ifItHappensAgain": "what to do if the behavior repeats"
+}`
+};
+
+
+/**
  * Build user prompt from context
  */
 function buildUserPrompt(payload) {
@@ -415,6 +574,303 @@ async function handleAnalyze(request, env) {
 }
 
 /**
+ * Build AI user prompt based on action and context
+ */
+function buildAIUserPrompt(action, payload) {
+    const context = payload.context || {};
+
+    switch (action) {
+        case 'prep-briefing':
+            return `Prepare a session briefing for:
+
+STUDENT: Grade ${context.grade} (${context.bandName})
+INCIDENT HISTORY (${context.incidentCount || 0} total incidents):
+${context.incidentSummary || 'No prior incidents'}
+
+PATTERNS OBSERVED:
+${context.patterns || 'None identified yet'}
+
+Provide actionable briefing for the upcoming session.`;
+
+        case 'generate-description':
+            return `Generate an incident description:
+
+CATEGORY: ${context.category} (${context.categoryLabel})
+SEVERITY: ${context.severity}
+TIME INTO SESSION: ${context.timeIntoSession || 0} minutes
+STUDENT GRADE: ${context.grade}
+ADDITIONAL CONTEXT: ${context.additionalContext || 'None provided'}
+
+Generate a concise, objective description.`;
+
+        case 'deescalation-coach':
+            return `URGENT: Tutor needs de-escalation help NOW.
+
+SITUATION: ${context.situation}
+STUDENT: Grade ${context.grade} (${context.bandName})
+CURRENT STATE: ${context.currentState || 'Escalating'}
+WHAT HAPPENED: ${context.whatHappened || 'Behavior escalating'}
+
+Provide IMMEDIATE, practical de-escalation guidance.`;
+
+        case 'session-summary':
+            return `Generate session summary:
+
+STUDENT: ${context.studentName || 'Student'}, Grade ${context.grade}
+SESSION DURATION: ${context.duration || 0} minutes
+MODE: ${context.mode || 'in-person'}
+
+INCIDENTS (${context.incidents?.length || 0}):
+${context.incidents?.map(i => `- ${i.category}: ${i.description} (Severity ${i.severity})`).join('\n') || 'None'}
+
+GOALS SET: ${context.goals?.join(', ') || 'None specified'}
+GOALS MET: ${context.goalsMet || 'Not tracked'}
+
+Generate a professional, balanced summary.`;
+
+        case 'pattern-insights':
+            return `Analyze behavior patterns:
+
+DATA RANGE: Last ${context.daysAnalyzed || 30} days
+TOTAL INCIDENTS: ${context.totalIncidents || 0}
+
+INCIDENT BREAKDOWN BY CATEGORY:
+${context.categoryBreakdown || 'No data'}
+
+TIME PATTERNS:
+${context.timePatterns || 'No data'}
+
+STUDENT(S) INCLUDED: ${context.studentCount || 1}
+
+Identify actionable patterns and recommendations.`;
+
+        case 'generate-script':
+            return `Generate discipline scripts:
+
+SITUATION: ${context.situation}
+STUDENT: Grade ${context.grade} (${context.bandName})
+BEHAVIOR CATEGORY: ${context.category || 'General'}
+DESIRED OUTCOME: ${context.desiredOutcome || 'Return to task'}
+TONE PREFERENCE: ${context.tonePreference || 'balanced'}
+
+Generate age-appropriate scripts in gentle, neutral, and firm tones.`;
+
+        case 'draft-email':
+            return `Draft parent email:
+
+STUDENT: ${context.studentName || 'Student'}, Grade ${context.grade}
+INCIDENT(S):
+${context.incidents?.map(i => `- ${i.category}: ${i.description}`).join('\n') || 'General behavior concern'}
+
+ACTIONS TAKEN: ${context.actionsTaken || 'Addressed in session'}
+TUTOR NOTES: ${context.tutorNotes || 'None'}
+EMAIL TONE REQUESTED: ${context.tone || 'informational'}
+
+Draft professional, non-blaming parent communication.`;
+
+        case 'suggest-goals':
+            return `Suggest session goals:
+
+STUDENT: Grade ${context.grade} (${context.bandName})
+RECENT INCIDENTS (last 5 sessions):
+${context.recentIncidents || 'None'}
+
+PREVIOUS GOALS: ${context.previousGoals || 'None set'}
+PREVIOUS GOAL SUCCESS: ${context.goalSuccess || 'Not tracked'}
+SESSION TYPE: ${context.sessionType || 'Regular tutoring'}
+
+Suggest specific, achievable behavioral goals.`;
+
+        case 'predict-behavior':
+            return `Predict session behavior:
+
+STUDENT: Grade ${context.grade} (${context.bandName})
+SESSION TIME: ${context.sessionTime || 'Afternoon'}
+SESSION DURATION PLANNED: ${context.plannedDuration || 60} minutes
+
+HISTORICAL PATTERNS:
+${context.historicalPatterns || 'No history'}
+
+CURRENT CONDITIONS:
+- Day of week: ${context.dayOfWeek || 'Unknown'}
+- Time since last session: ${context.daysSinceLastSession || 'Unknown'}
+- Last session summary: ${context.lastSessionSummary || 'Unknown'}
+
+Predict likely behavior patterns and provide proactive measures.`;
+
+        case 'resolution-steps':
+            return `Advise on incident resolution:
+
+INCIDENT: ${context.category} (${context.categoryLabel})
+DESCRIPTION: ${context.description}
+SEVERITY: ${context.severity}
+STUDENT: Grade ${context.grade} (${context.bandName})
+ACTIONS ALREADY TAKEN: ${context.actionsTaken || 'None yet'}
+STUDENT RESPONSE: ${context.studentResponse || 'Unknown'}
+
+Provide step-by-step resolution plan.`;
+
+        default:
+            return `Context: ${JSON.stringify(context)}`;
+    }
+}
+
+/**
+ * Handle unified AI endpoint for all AI features
+ */
+async function handleAI(request, env) {
+    const origin = request.headers.get('Origin');
+    const headers = {
+        'Content-Type': 'application/json',
+        ...corsHeaders(origin, env)
+    };
+
+    // Check origin
+    if (!isOriginAllowed(origin, env)) {
+        return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+            status: 403,
+            headers
+        });
+    }
+
+    // Check rate limit
+    const clientIP = request.headers.get('CF-Connecting-IP') || 'unknown';
+    if (!checkRateLimit(clientIP)) {
+        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please wait.' }), {
+            status: 429,
+            headers: {
+                ...headers,
+                'Retry-After': '60'
+            }
+        });
+    }
+
+    // Check API key is configured
+    if (!env.DEEPSEEK_API_KEY) {
+        return new Response(JSON.stringify({ error: 'AI service not configured' }), {
+            status: 503,
+            headers
+        });
+    }
+
+    // Parse body
+    let payload;
+    try {
+        payload = await request.json();
+    } catch (e) {
+        return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+            status: 400,
+            headers
+        });
+    }
+
+    // Validate action
+    const action = payload.action;
+    if (!action || !AI_PROMPTS[action]) {
+        return new Response(JSON.stringify({
+            error: 'Invalid or missing action',
+            validActions: Object.keys(AI_PROMPTS)
+        }), {
+            status: 400,
+            headers
+        });
+    }
+
+    // Build prompts
+    const systemPrompt = AI_PROMPTS[action];
+    const userPrompt = buildAIUserPrompt(action, payload);
+
+    // Call DeepSeek API
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
+
+        const deepseekResponse = await fetch(CONFIG.DEEPSEEK_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: CONFIG.MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                max_tokens: CONFIG.MAX_TOKENS,
+                temperature: 0.4,
+                response_format: { type: 'json_object' }
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeout);
+
+        if (!deepseekResponse.ok) {
+            const errorText = await deepseekResponse.text();
+            console.error('DeepSeek API error:', deepseekResponse.status, errorText);
+            return new Response(JSON.stringify({
+                error: 'AI service error',
+                status: deepseekResponse.status
+            }), {
+                status: 502,
+                headers
+            });
+        }
+
+        const deepseekData = await deepseekResponse.json();
+
+        // Extract the content
+        const content = deepseekData.choices?.[0]?.message?.content;
+        if (!content) {
+            return new Response(JSON.stringify({ error: 'Empty response from AI' }), {
+                status: 502,
+                headers
+            });
+        }
+
+        // Parse the JSON response
+        let result;
+        try {
+            result = JSON.parse(content);
+        } catch (e) {
+            console.error('Failed to parse AI response:', content);
+            return new Response(JSON.stringify({
+                error: 'Invalid response format from AI',
+                raw: content.substring(0, 200)
+            }), {
+                status: 502,
+                headers
+            });
+        }
+
+        // Return the result with action metadata
+        return new Response(JSON.stringify({
+            action,
+            result,
+            timestamp: new Date().toISOString()
+        }), {
+            status: 200,
+            headers
+        });
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return new Response(JSON.stringify({ error: 'Request timeout' }), {
+                status: 504,
+                headers
+            });
+        }
+
+        console.error('Unexpected error:', error);
+        return new Response(JSON.stringify({ error: 'Internal error' }), {
+            status: 500,
+            headers
+        });
+    }
+}
+
+/**
  * Main request handler
  */
 export default {
@@ -444,6 +900,18 @@ export default {
                     });
                 }
                 return handleAnalyze(request, env);
+
+            case '/ai':
+                if (request.method !== 'POST') {
+                    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+                        status: 405,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Allow': 'POST, OPTIONS'
+                        }
+                    });
+                }
+                return handleAI(request, env);
 
             default:
                 return new Response(JSON.stringify({ error: 'Not found' }), {
