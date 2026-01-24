@@ -823,7 +823,16 @@ textarea.form-control {
     transition: all var(--transition-fast);
 }
 
-.incident-row:hover {
+/* Override for table rows - don't use grid */
+tr.incident-row {
+    display: table-row;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
+}
+
+tr.incident-row:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
@@ -1225,18 +1234,55 @@ textarea.form-control {
 
 .incidents-list {
     padding: var(--space-4);
+    overflow-x: auto;
 }
 
 .incidents-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .incidents-table th,
 .incidents-table td {
-    padding: var(--space-3);
+    padding: var(--space-3) var(--space-4);
     text-align: left;
     border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+/* Define column widths */
+.incidents-table th:nth-child(1),
+.incidents-table td:nth-child(1) {
+    width: 140px;
+    /* Date/Time */
+}
+
+.incidents-table th:nth-child(2),
+.incidents-table td:nth-child(2) {
+    width: 130px;
+    /* Category */
+}
+
+.incidents-table th:nth-child(3),
+.incidents-table td:nth-child(3) {
+    width: 60px;
+    /* Severity */
+    text-align: center;
+}
+
+.incidents-table th:nth-child(4),
+.incidents-table td:nth-child(4) {
+    width: auto;
+    /* Description - takes remaining space */
+    min-width: 200px;
+}
+
+.incidents-table th:nth-child(5),
+.incidents-table td:nth-child(5) {
+    width: 110px;
+    /* Status */
+    text-align: center;
 }
 
 .incidents-table th {
@@ -1244,6 +1290,36 @@ textarea.form-control {
     text-transform: uppercase;
     color: var(--text-muted);
     font-weight: 600;
+    white-space: nowrap;
+}
+
+.incidents-table td {
+    font-size: var(--font-size-sm);
+}
+
+/* Category cell styling */
+.incidents-table td:nth-child(2) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Description cell styling */
+.incidents-table td:nth-child(4) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+}
+
+/* Severity badge styling */
+.incidents-table td:nth-child(3) {
+    font-weight: 600;
+}
+
+/* Status badge styling */
+.incidents-table td:nth-child(5) {
+    white-space: nowrap;
 }
 
 .incidents-table tbody tr {
@@ -1252,7 +1328,14 @@ textarea.form-control {
 }
 
 .incidents-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Empty state */
+.incidents-list .empty-state {
+    text-align: center;
+    padding: var(--space-8);
+    color: var(--text-muted);
 }
 
 /* ========================================
@@ -1756,6 +1839,11 @@ textarea.form-control {
     .incident-row {
         grid-template-columns: 1fr;
         gap: var(--space-1);
+    }
+
+    /* Keep table rows as table-row on mobile */
+    tr.incident-row {
+        display: table-row;
     }
 
     .incident-row>* {
