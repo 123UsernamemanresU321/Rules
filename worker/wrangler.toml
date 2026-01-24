@@ -1,0 +1,27 @@
+name = "session-order-os-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Account ID - uncomment and fill in after running `wrangler whoami`
+# account_id = "your-account-id-here"
+
+# Environment variables (non-secret)
+[vars]
+# Comma-separated list of allowed origins
+# Update this with your GitHub Pages URL after deployment
+# Example: "https://yourusername.github.io,http://localhost:8080"
+ALLOWED_ORIGINS = "http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080"
+
+# The DEEPSEEK_API_KEY secret should be set via:
+# wrangler secret put DEEPSEEK_API_KEY
+# Never put the API key in this file!
+
+# Optional: Custom routes (if using custom domain)
+# [[routes]]
+# pattern = "api.yourdomain.com/*"
+# zone_name = "yourdomain.com"
+
+# Development settings
+[dev]
+port = 8787
+local_protocol = "http"

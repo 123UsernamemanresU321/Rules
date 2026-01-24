@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Session Order OS - Offline-first tutoring session discipline management">
+    <meta name="theme-color" content="#1e1b4b">
+    <title>Session Order OS</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header glass">
+            <div class="header-brand">
+                <span class="logo">📚</span>
+                <h1>Session Order OS</h1>
+            </div>
+            <nav class="header-nav">
+                <a href="#session" data-nav="session" class="nav-item active">
+                    <span class="icon">🎛️</span>
+                    <span class="label">Session</span>
+                </a>
+                <a href="#rules" data-nav="rules" class="nav-item">
+                    <span class="icon">📋</span>
+                    <span class="label">Rules</span>
+                </a>
+                <a href="#methodology" data-nav="methodology" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span class="label">Methodology</span>
+                </a>
+                <a href="#incidents" data-nav="incidents" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span class="label">Incidents</span>
+                </a>
+                <a href="#reports" data-nav="reports" class="nav-item">
+                    <span class="icon">📈</span>
+                    <span class="label">Reports</span>
+                </a>
+                <a href="#settings" data-nav="settings" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span class="label">Settings</span>
+                </a>
+            </nav>
+            <div id="offlineIndicator" class="offline-indicator hidden">
+                <span>📴 Offline</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="main-content">
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading Session Order OS...</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Session Order OS • Privacy-first • Offline-capable</p>
+        </footer>
+    </div>
+
+    <!-- Scripts (order matters) -->
+    <script src="utils.js"></script>
+    <script src="db.js"></script>
+    <script src="methodology.js"></script>
+    <script src="validate.js"></script>
+    <script src="ai.js"></script>
+    <script src="export.js"></script>
+    <script src="session.js"></script>
+    <script src="incidents.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
