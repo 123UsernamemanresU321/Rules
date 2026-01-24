@@ -233,8 +233,56 @@ Respond with JSON:
   "parentInvolvement": "whether/how to involve parent",
   "successIndicators": ["how to know it's resolved"],
   "ifItHappensAgain": "what to do if the behavior repeats"
+}`,
+
+    // Smart Analyze - Auto-severity and session intelligence
+    'smart-analyze': `You are analyzing a tutoring session incident to determine severity and provide real-time guidance.
+
+Your job:
+1. Determine the severity of this incident (1-4) based on the incident itself AND the session context
+2. Provide an immediate action recommendation for the tutor
+3. Decide if the session should be stopped
+
+SEVERITY LEVELS:
+- 1 (Minor): Brief distraction, easily redirected, no disruption
+- 2 (Moderate): Repeated or intentional, requires intervention, some disruption
+- 3 (Major): Significant disruption, defiance, or safety concern
+- 4 (Critical): Immediate safety risk, complete session breakdown, or extreme behavior
+
+ESCALATION FACTORS that increase severity:
+- Multiple incidents of same type in session
+- Incidents occurring rapidly (3+ in 10 min = concern)
+- Late in session (fatigue increases severity)
+- Prior incidents in this session already moderate/major
+- Pattern of escalation (each incident worse than previous)
+
+DE-ESCALATION FACTORS that decrease severity:
+- First incident of session
+- Long time between incidents
+- Student self-corrected quickly
+- Early in session (more energy)
+
+Respond with JSON only:
+{
+  "severity": 1-4,
+  "severityConfidence": 0.0-1.0,
+  "severityReasoning": "brief explanation of why this severity",
+  "actionPlan": {
+    "type": "continue|break|reduce_difficulty|guided_practice|switch_activity|end_session",
+    "urgency": "low|medium|high|critical",
+    "message": "What to say/do RIGHT NOW (1-2 sentences)",
+    "duration": null or seconds for break
+  },
+  "sessionStatus": {
+    "shouldStop": true/false,
+    "stopReason": "reason if shouldStop is true, else null",
+    "warningLevel": "green|yellow|orange|red",
+    "warningMessage": "status message for tutor"
+  },
+  "patternDetected": "description of any concerning pattern or null"
 }`
 };
+
 
 
 /**
@@ -709,6 +757,41 @@ ACTIONS ALREADY TAKEN: ${context.actionsTaken || 'None yet'}
 STUDENT RESPONSE: ${context.studentResponse || 'Unknown'}
 
 Provide step-by-step resolution plan.`;
+
+        case 'smart-analyze':
+            // Build incident history summary
+            const incidents = context.sessionIncidents || [];
+            const incidentHistory = incidents.map((inc, i) =>
+                `  ${i + 1}. ${inc.category} (Severity ${inc.severity}) - ${inc.timeIntoSession || 0}min into session`
+            ).join('\n') || '  None';
+
+            // Calculate incident rate
+            const recentIncidents = incidents.filter(inc => {
+                const incTime = inc.timeIntoSession || 0;
+                const currentTime = context.timeIntoSession || 0;
+                return (currentTime - incTime) <= 10; // Last 10 minutes
+            });
+
+            return `Analyze this incident and provide severity + action guidance:
+
+CURRENT INCIDENT:
+- Category: ${context.category} (${context.categoryLabel})
+- Time into session: ${context.timeIntoSession || 0} minutes
+
+STUDENT:
+- Grade: ${context.grade} (${context.bandName})
+
+SESSION STATE:
+- Total incidents so far: ${incidents.length}
+- Incidents in last 10 min: ${recentIncidents.length}
+- Session duration so far: ${context.timeIntoSession || 0} minutes
+
+PRIOR INCIDENTS THIS SESSION:
+${incidentHistory}
+
+${context.additionalContext ? `ADDITIONAL CONTEXT: ${context.additionalContext}` : ''}
+
+Determine severity (1-4), provide action recommendation, and assess if session should stop.`;
 
         default:
             return `Context: ${JSON.stringify(context)}`;

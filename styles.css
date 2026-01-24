@@ -2383,3 +2383,278 @@ textarea.form-control {
         width: 100%;
     }
 }
+
+/* ========================
+   SMART SEVERITY & EMERGENCY STOP
+   ======================== */
+
+/* AI Severity Notice in Quick Log */
+.ai-severity-notice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.ai-severity-notice .icon {
+    font-size: var(--font-size-xl);
+}
+
+/* Button loading state */
+.btn .btn-loading.hidden,
+.btn .btn-text.hidden {
+    display: none;
+}
+
+/* Action Recommendation Toast */
+.action-recommendation-toast {
+    position: fixed;
+    top: var(--space-6);
+    right: var(--space-6);
+    width: 380px;
+    max-width: calc(100vw - var(--space-8));
+    z-index: 1050;
+    animation: slideInRight 0.3s ease-out;
+    border-left: 4px solid var(--accent-primary);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.action-recommendation-toast .toast-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--bg-tertiary);
+}
+
+.action-recommendation-toast .toast-header .icon {
+    font-size: var(--font-size-xl);
+}
+
+.action-recommendation-toast .toast-header .title {
+    flex: 1;
+    font-weight: 600;
+}
+
+.action-recommendation-toast .toast-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all var(--transition-fast);
+}
+
+.action-recommendation-toast .toast-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.action-recommendation-toast .toast-body {
+    padding: var(--space-3);
+}
+
+.action-recommendation-toast .severity-badge {
+    display: inline-block;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    color: white;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-2);
+}
+
+.action-recommendation-toast .reasoning {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-3);
+}
+
+.action-recommendation-toast .action-plan {
+    padding: var(--space-3);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--success);
+    margin-bottom: var(--space-3);
+}
+
+.action-recommendation-toast .action-urgency {
+    font-weight: 700;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-1);
+}
+
+.action-recommendation-toast .action-message {
+    font-weight: 500;
+    margin-bottom: var(--space-2);
+}
+
+.action-recommendation-toast .session-status {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-2);
+}
+
+.action-recommendation-toast .pattern-warning {
+    padding: var(--space-2);
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    color: var(--warning);
+}
+
+/* Emergency Stop Overlay */
+.emergency-stop-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.98), rgba(153, 27, 27, 0.98));
+    backdrop-filter: blur(20px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: emergencyFadeIn 0.3s ease-out;
+}
+
+@keyframes emergencyFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.emergency-content {
+    text-align: center;
+    color: white;
+    animation: emergencyPulse 2s ease-in-out infinite;
+}
+
+@keyframes emergencyPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+.emergency-content .stop-icon {
+    font-size: 5rem;
+    margin-bottom: var(--space-4);
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-10px);
+    }
+
+    75% {
+        transform: translateX(10px);
+    }
+}
+
+.emergency-content h1 {
+    font-size: 4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 8px;
+    margin-bottom: var(--space-4);
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.emergency-content .stop-reason {
+    font-size: var(--font-size-xl);
+    max-width: 500px;
+    margin: 0 auto var(--space-4);
+    opacity: 0.9;
+}
+
+.emergency-content .stop-time {
+    font-size: var(--font-size-lg);
+    opacity: 0.7;
+    margin-bottom: var(--space-6);
+}
+
+.emergency-content .acknowledge-btn {
+    background: white;
+    color: #dc2626;
+    font-weight: 700;
+    font-size: var(--font-size-lg);
+    padding: var(--space-4) var(--space-6);
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.emergency-content .acknowledge-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Emergency Stop */
+@media (max-width: 768px) {
+    .emergency-content h1 {
+        font-size: 2.5rem;
+        letter-spacing: 4px;
+    }
+
+    .emergency-content .stop-icon {
+        font-size: 3rem;
+    }
+
+    .action-recommendation-toast {
+        top: auto;
+        bottom: var(--space-4);
+        right: var(--space-4);
+        left: var(--space-4);
+        width: auto;
+    }
+}

@@ -699,52 +699,30 @@ const App = {
                     <button class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label>Severity</label>
-                        <div class="severity-buttons">
-                            <button class="severity-btn" data-severity="1">1 Minor</button>
-                            <button class="severity-btn active" data-severity="2">2 Moderate</button>
-                            <button class="severity-btn" data-severity="3">3 Major</button>
-                            <button class="severity-btn" data-severity="4">4 Critical</button>
-                        </div>
+                    <div class="ai-severity-notice">
+                        <span class="icon">🤖</span>
+                        <span>AI will automatically determine severity based on context</span>
                     </div>
                     <div class="form-group">
-                        <label>Brief Description (≤20 words)</label>
+                        <label>Brief Description (Optional)</label>
                         <input type="text" id="incidentDesc" class="form-control" 
-                               placeholder="What happened?" maxlength="200" autofocus>
-                        <span class="word-count">0/20 words</span>
-                    </div>
-                    <div class="form-group">
-                        <label>Context (Optional)</label>
-                        <textarea id="incidentContext" class="form-control" 
-                                  placeholder="Any additional context..." rows="2"></textarea>
+                               placeholder="What happened? (AI will analyze)" maxlength="200" autofocus>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary modal-cancel">Cancel</button>
-                    <button class="btn btn-primary" id="logIncidentBtn">Log Incident</button>
+                    <button class="btn btn-primary" id="logIncidentBtn">
+                        <span class="btn-text">Log & Analyze</span>
+                        <span class="btn-loading hidden">Analyzing...</span>
+                    </button>
                 </div>
             </div>
         `;
 
         document.body.appendChild(modal);
 
-        // Severity buttons
-        modal.querySelectorAll('.severity-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                modal.querySelectorAll('.severity-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-        // Word count
         const descInput = modal.querySelector('#incidentDesc');
-        const wordCount = modal.querySelector('.word-count');
-        descInput?.addEventListener('input', () => {
-            const words = Utils.wordCount(descInput.value);
-            wordCount.textContent = `${words}/20 words`;
-            wordCount.style.color = words > 20 ? 'var(--danger)' : '';
-        });
+        const logBtn = modal.querySelector('#logIncidentBtn');
 
         // Close handlers
         modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
@@ -753,34 +731,175 @@ const App = {
             if (e.target === modal) modal.remove();
         });
 
-        // Log incident
-        modal.querySelector('#logIncidentBtn').addEventListener('click', async () => {
-            const severity = modal.querySelector('.severity-btn.active')?.dataset.severity || 2;
-            const description = descInput.value.trim();
-            const context = modal.querySelector('#incidentContext').value.trim();
+        // Log incident with smart analysis
+        logBtn.addEventListener('click', async () => {
+            const description = descInput.value.trim() || `${cat.label} incident`;
 
-            if (!description) {
-                this.showError('Description is required');
-                return;
-            }
-
-            if (Utils.wordCount(description) > 20) {
-                this.showError('Description must be 20 words or less');
-                return;
-            }
+            // Show loading state
+            logBtn.querySelector('.btn-text').classList.add('hidden');
+            logBtn.querySelector('.btn-loading').classList.remove('hidden');
+            logBtn.disabled = true;
 
             try {
-                const result = await Incidents.quickLog(category, severity, description, context);
+                // Get session context for AI analysis
+                const sessionSummary = await Session.getSessionSummary();
+                const sessionContext = {
+                    student: Session.currentStudent,
+                    timeIntoSession: Math.floor(sessionSummary.durationSeconds / 60),
+                    incidents: sessionSummary.incidents || [],
+                    additionalContext: description
+                };
+
+                // Get AI analysis (or deterministic fallback)
+                const analysis = await AI.smartAnalyzeIncident(category, sessionContext);
+
+                // Log the incident with AI-determined severity
+                const result = await Incidents.quickLog(
+                    category,
+                    analysis.severity,
+                    description,
+                    analysis.severityReasoning
+                );
+
                 modal.remove();
-                this.showIncidentResult(result);
-                this.renderSessionPage(); // Refresh counters
+
+                // Show action recommendation
+                this.showSmartAnalysisResult(analysis, cat);
+
+                // Check if session should stop
+                if (analysis.sessionStatus?.shouldStop) {
+                    this.showEmergencyStop(analysis.sessionStatus.stopReason);
+                } else {
+                    // Refresh the page
+                    this.renderSessionPage();
+                }
+
             } catch (error) {
                 this.showError(error.message);
+                logBtn.querySelector('.btn-text').classList.remove('hidden');
+                logBtn.querySelector('.btn-loading').classList.add('hidden');
+                logBtn.disabled = false;
             }
         });
 
         // Focus description input
         descInput?.focus();
+    },
+
+    /**
+     * Show smart analysis result with action recommendation
+     */
+    showSmartAnalysisResult(analysis, category) {
+        const urgencyColors = {
+            low: 'var(--success)',
+            medium: 'var(--warning)',
+            high: 'var(--danger)',
+            critical: '#ff0000'
+        };
+
+        const warningColors = {
+            green: 'var(--success)',
+            yellow: 'var(--warning)',
+            orange: '#ff8c00',
+            red: 'var(--danger)'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = 'action-recommendation-toast glass';
+        toast.innerHTML = `
+            <div class="toast-header">
+                <span class="icon">🤖</span>
+                <span class="title">${category.label} - Severity ${analysis.severity}</span>
+                <button class="toast-close">&times;</button>
+            </div>
+            <div class="toast-body">
+                <div class="severity-badge" style="background: ${Methodology.getSeverity(analysis.severity).color}">
+                    Level ${analysis.severity}: ${Methodology.getSeverity(analysis.severity).name}
+                </div>
+                <p class="reasoning">${analysis.severityReasoning}</p>
+                
+                <div class="action-plan" style="border-left-color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
+                    <div class="action-urgency" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
+                        ${analysis.actionPlan?.urgency?.toUpperCase() || 'SUGGESTION'}
+                    </div>
+                    <p class="action-message">${analysis.actionPlan?.message || 'Continue monitoring.'}</p>
+                    ${analysis.actionPlan?.type === 'break' && analysis.actionPlan?.duration ? `
+                        <button class="btn btn-primary btn-small start-break-btn" data-duration="${analysis.actionPlan.duration}">
+                            Start ${analysis.actionPlan.duration}s Break
+                        </button>
+                    ` : ''}
+                </div>
+                
+                <div class="session-status" style="background: ${warningColors[analysis.sessionStatus?.warningLevel || 'green']}20">
+                    <span style="color: ${warningColors[analysis.sessionStatus?.warningLevel || 'green']}">
+                        ${analysis.sessionStatus?.warningMessage || 'Session OK'}
+                    </span>
+                </div>
+                
+                ${analysis.patternDetected ? `
+                    <div class="pattern-warning">
+                        ⚠️ ${analysis.patternDetected}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        document.body.appendChild(toast);
+
+        // Close handler
+        toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
+
+        // Break button handler
+        toast.querySelector('.start-break-btn')?.addEventListener('click', (e) => {
+            const duration = parseInt(e.target.dataset.duration);
+            this.showBreakTimer(duration);
+            toast.remove();
+        });
+
+        // Auto-remove after 15 seconds (unless critical)
+        if (analysis.actionPlan?.urgency !== 'critical') {
+            setTimeout(() => toast.remove(), 15000);
+        }
+    },
+
+    /**
+     * Show emergency session stop overlay
+     */
+    showEmergencyStop(reason) {
+        // Pause the timer
+        Session.pauseTimer();
+
+        // Remove any existing overlay
+        document.querySelector('.emergency-stop-overlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'emergency-stop-overlay';
+        overlay.innerHTML = `
+            <div class="emergency-content">
+                <div class="stop-icon">🛑</div>
+                <h1>SESSION STOPPED</h1>
+                <p class="stop-reason">${reason || 'Critical threshold reached'}</p>
+                <div class="stop-time">${new Date().toLocaleTimeString()}</div>
+                <button class="btn btn-large acknowledge-btn">Acknowledge & End Session</button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Play alert sound if available
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQ==');
+            audio.play().catch(() => { }); // Ignore if audio fails
+        } catch (e) { }
+
+        // Acknowledge handler
+        overlay.querySelector('.acknowledge-btn').addEventListener('click', async () => {
+            overlay.remove();
+            await Session.endSession();
+            this.hideDeescalationCoachButton();
+            this.renderSessionPage();
+            this.showSuccess('Session ended. Take a moment before starting a new one.');
+        });
     },
 
     /**

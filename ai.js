@@ -605,6 +605,131 @@ const AI = {
         };
 
         return await this.callAIFeature('resolution-steps', context);
+    },
+
+    /**
+     * 11. Smart Analyze Incident
+     * Auto-determines severity and provides session intelligence
+     * @param {string} category - Incident category
+     * @param {Object} sessionContext - Current session state
+     * @returns {Promise<Object>} Severity, action plan, and session status
+     */
+    async smartAnalyzeIncident(category, sessionContext) {
+        const student = sessionContext.student;
+        const band = Utils.getGradeBand(student?.grade || 6);
+        const bandInfo = Methodology.defaultConfig.gradeBands[band];
+        const categoryInfo = Methodology.getCategory(category);
+
+        const context = {
+            category: category,
+            categoryLabel: categoryInfo?.label || category,
+            grade: student?.grade || 6,
+            bandName: bandInfo?.name || 'Unknown',
+            timeIntoSession: sessionContext.timeIntoSession || 0,
+            sessionIncidents: sessionContext.incidents || [],
+            additionalContext: sessionContext.additionalContext || ''
+        };
+
+        // Try AI first
+        const result = await this.callAIFeature('smart-analyze', context);
+
+        // If AI available, return result
+        if (result) {
+            return result;
+        }
+
+        // Fallback: deterministic severity calculation
+        return this.getDeterministicSmartAnalysis(category, sessionContext);
+    },
+
+    /**
+     * Deterministic fallback for smart analysis when AI unavailable
+     */
+    getDeterministicSmartAnalysis(category, sessionContext) {
+        const incidents = sessionContext.incidents || [];
+        const timeIntoSession = sessionContext.timeIntoSession || 0;
+
+        // Count incidents of same type
+        const sameTypeCount = incidents.filter(i => i.category === category).length;
+
+        // Count recent incidents (last 10 min)
+        const recentIncidents = incidents.filter(i => {
+            const incTime = i.timeIntoSession || 0;
+            return (timeIntoSession - incTime) <= 10;
+        });
+
+        // Calculate base severity from methodology
+        let severity = 1;
+
+        // Escalation factors
+        if (sameTypeCount >= 2) severity = Math.min(4, severity + 1);
+        if (recentIncidents.length >= 3) severity = Math.min(4, severity + 1);
+        if (timeIntoSession > 45) severity = Math.min(4, severity + 1); // Late session fatigue
+        if (incidents.some(i => i.severity >= 3)) severity = Math.min(4, severity + 1); // Prior major incident
+
+        // Determine action plan
+        let actionPlan = {
+            type: 'continue',
+            urgency: 'low',
+            message: 'Continue with gentle redirection.',
+            duration: null
+        };
+
+        if (severity >= 2 || recentIncidents.length >= 2) {
+            actionPlan = {
+                type: 'break',
+                urgency: 'medium',
+                message: 'Consider a short reset break.',
+                duration: 60
+            };
+        }
+
+        if (severity >= 3 || recentIncidents.length >= 4) {
+            actionPlan = {
+                type: 'reduce_difficulty',
+                urgency: 'high',
+                message: 'Switch to easier activity or guided practice.',
+                duration: null
+            };
+        }
+
+        // Determine if session should stop
+        let shouldStop = false;
+        let stopReason = null;
+        let warningLevel = 'green';
+        let warningMessage = 'Session proceeding normally';
+
+        if (incidents.length >= 3 && severity >= 2) {
+            warningLevel = 'yellow';
+            warningMessage = 'Multiple incidents - monitor closely';
+        }
+
+        if (recentIncidents.length >= 4 || incidents.filter(i => i.severity >= 3).length >= 2) {
+            warningLevel = 'orange';
+            warningMessage = 'Escalation pattern detected - consider ending';
+        }
+
+        if (incidents.length >= 5 && severity >= 3 || incidents.filter(i => i.severity >= 4).length >= 1) {
+            shouldStop = true;
+            stopReason = 'Critical threshold reached: too many significant incidents';
+            warningLevel = 'red';
+            warningMessage = 'SESSION STOP RECOMMENDED';
+        }
+
+        return {
+            severity,
+            severityConfidence: 0.7,
+            severityReasoning: 'Determined by methodology rules (AI unavailable)',
+            actionPlan,
+            sessionStatus: {
+                shouldStop,
+                stopReason,
+                warningLevel,
+                warningMessage
+            },
+            patternDetected: sameTypeCount >= 2 ? `Repeated ${category} incidents (${sameTypeCount + 1} total)` : null,
+            source: 'deterministic'
+        };
     }
 };
 
