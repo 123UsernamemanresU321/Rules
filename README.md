@@ -25,15 +25,15 @@ Session Order OS helps tutors maintain order during live tutoring sessions with 
 ### Option 1: Run Locally (No Server Required)
 
 1. Clone or download this repository
-2. Open `frontend/index.html` in your browser
+2. Open `index.html` in your browser
 3. Start using the app!
 
 ### Option 2: Deploy to GitHub Pages
 
-1. Fork this repository
-2. Go to **Settings → Pages** in your fork
-3. Set source to `main` branch, `/frontend` folder
-4. Your app will be live at `https://yourusername.github.io/session-order-os/`
+1. Push this repository to your GitHub account
+2. Go to **Settings → Pages**
+3. Set source to **main branch** and **/ (root)** folder
+4. Wait 1-2 minutes, then visit `https://yourusername.github.io/your-repo-name/`
 
 ---
 
@@ -41,47 +41,52 @@ Session Order OS helps tutors maintain order during live tutoring sessions with 
 
 ```
 session-order-os/
-├── frontend/           # Static web app (deploy to GitHub Pages)
-│   ├── index.html      # Main HTML shell
-│   ├── styles.css      # Complete styling
-│   ├── app.js          # Main app controller
-│   ├── db.js           # IndexedDB wrapper
-│   ├── session.js      # Session management
-│   ├── incidents.js    # Incident logging
-│   ├── methodology.js  # Discipline methodology
-│   ├── ai.js           # AI communication (via Worker)
-│   ├── validate.js     # JSON Schema validation
-│   ├── export.js       # Export/import functionality
-│   └── utils.js        # Utilities
+├── index.html          # Main HTML shell
+├── styles.css          # Complete styling
+├── app.js              # Main app controller
+├── db.js               # IndexedDB wrapper
+├── session.js          # Session management
+├── incidents.js        # Incident logging
+├── methodology.js      # Discipline methodology
+├── ai.js               # AI communication (via Worker)
+├── validate.js         # JSON Schema validation
+├── export.js           # Export/import functionality
+├── utils.js            # Utilities
+├── README.md           # This file
 ├── worker/             # Cloudflare Worker (optional)
 │   ├── worker.js       # Worker code
 │   ├── wrangler.toml   # Worker config
 │   └── README.md       # Worker-specific docs
-├── tests/              # Test suite
-│   ├── test.html       # Test runner
-│   └── tests.js        # Unit tests
-└── README.md           # This file
+└── tests/              # Test suite
+    ├── test.html       # Test runner
+    └── tests.js        # Unit tests
 ```
 
 ---
 
 ## GitHub Pages Deployment
 
-### Step 1: Fork and Enable Pages
+### Step 1: Push to GitHub and Enable Pages
 
-1. Click **Fork** on this repository
-2. In your fork, go to **Settings → Pages**
-3. Under "Source", select:
+1. Create a new repository on GitHub (or use existing)
+2. Push this project to your repository:
+   ```bash
+   git add .
+   git commit -m "Add Session Order OS"
+   git push
+   ```
+3. Go to **Settings → Pages**
+4. Under "Source", select:
    - Branch: `main`
-   - Folder: `/frontend`
-4. Click **Save**
-5. Wait 1-2 minutes for deployment
+   - Folder: `/ (root)`
+5. Click **Save**
+6. Wait 1-2 minutes for deployment
 
 ### Step 2: Access Your App
 
 Your app will be available at:
 ```
-https://YOUR_USERNAME.github.io/session-order-os/
+https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/
 ```
 
 ### Step 3: Configure AI (Optional)
