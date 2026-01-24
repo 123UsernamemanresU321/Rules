@@ -664,10 +664,10 @@ const AI = {
             return (timeIntoSession - incTime) <= 10;
         });
 
-        // Calculate base severity from methodology
-        let severity = 1;
+        // Get grade-aware BASE severity (not starting at 1!)
+        let severity = this.getGradeAwareBaseSeverity(category, grade);
 
-        // Escalation factors
+        // Escalation factors (can still increase from base)
         if (sameTypeCount >= 2) severity = Math.min(4, severity + 1);
         if (recentIncidents.length >= 3) severity = Math.min(4, severity + 1);
         if (timeIntoSession > 45) severity = Math.min(4, severity + 1); // Late session fatigue
@@ -817,6 +817,57 @@ const AI = {
             };
             return scripts[severity] || scripts[1];
         }
+    },
+
+    /**
+     * Grade-aware base severity matrix
+     * Based on pedagogical principle: same behavior = higher severity as grade increases
+     * because understanding, accountability, and stakes increase with age.
+     * 
+     * Grade bands: 1-2, 3-5, 6-8, 9-10, 11-13
+     * Severity: 1 (Minor), 2 (Moderate), 3 (Major), 4 (Critical)
+     */
+    getGradeAwareBaseSeverity(category, grade) {
+        // Severity matrix by category and grade band
+        // Format: [G1-2, G3-5, G6-8, G9-10, G11-13]
+        const severityMatrix = {
+            // Off-task: Minor for young, increases with age
+            'FOCUS_OFF_TASK': [1, 1, 2, 2, 3],
+
+            // Interrupting: More serious as student should know better with age
+            'INTERRUPTING': [1, 1, 2, 2, 3],
+
+            // Disrespect/Tone: Personal abuse - scales significantly with age
+            'DISRESPECT_TONE': [2, 3, 4, 4, 4],
+
+            // Non-compliance/Refusal: Defiance becomes more serious with age
+            'NON_COMPLIANCE': [2, 3, 3, 4, 4],
+
+            // Device misuse: Willful distraction - scales with age
+            'TECH_MISUSE': [2, 3, 4, 4, 4],
+
+            // Academic integrity: Severity increases dramatically with age
+            // Young kids don't understand authorship; older students know it's wrong
+            'ACADEMIC_INTEGRITY': [1, 2, 3, 4, 4],
+
+            // Safety: Always serious, but even more so with age
+            'SAFETY_BOUNDARY': [3, 3, 4, 4, 4],
+
+            // Other: Default progression
+            'OTHER': [1, 1, 2, 2, 3]
+        };
+
+        // Determine grade band index (0-4)
+        let bandIndex;
+        if (grade <= 2) bandIndex = 0;      // Grades 1-2
+        else if (grade <= 5) bandIndex = 1; // Grades 3-5
+        else if (grade <= 8) bandIndex = 2; // Grades 6-8
+        else if (grade <= 10) bandIndex = 3; // Grades 9-10
+        else bandIndex = 4;                  // Grades 11-13
+
+        // Look up base severity
+        const categoryMatrix = severityMatrix[category] || severityMatrix['OTHER'];
+        return categoryMatrix[bandIndex] || 1;
     }
 };
 

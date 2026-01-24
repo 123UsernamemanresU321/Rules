@@ -270,6 +270,19 @@ MISTAKES TO AVOID:
 - Too soft with young kids → chaos, insecurity
 - Too controlling with teens → power struggles, shutdown
 
+BASE SEVERITY BY CATEGORY AND GRADE (use as starting point before escalation):
+| Behavior         | G1-2 | G3-5 | G6-8 | G9-10 | G11-13 |
+|------------------|------|------|------|-------|--------|
+| Off-task         | 1    | 1    | 2    | 2     | 3      |
+| Interrupting     | 1    | 1    | 2    | 2     | 3      |
+| Disrespect/Tone  | 2    | 3    | 4    | 4     | 4      |
+| Refusal          | 2    | 3    | 3    | 4     | 4      |
+| Device misuse    | 2    | 3    | 4    | 4     | 4      |
+| AI/Cheating      | 1    | 2    | 3    | 4     | 4      |
+| Safety           | 3    | 3    | 4    | 4     | 4      |
+
+IMPORTANT: Start with the BASE severity from the table above, then adjust up based on escalation factors.
+
 SEVERITY LEVELS:
 - 1 (Minor): Brief distraction, easily redirected, no disruption
 - 2 (Moderate): Repeated or intentional, requires intervention, some disruption
