@@ -648,6 +648,12 @@ const AI = {
     getDeterministicSmartAnalysis(category, sessionContext) {
         const incidents = sessionContext.incidents || [];
         const timeIntoSession = sessionContext.timeIntoSession || 0;
+        const student = sessionContext.student || {};
+        const grade = student.grade || 6;
+
+        // Determine grade approach
+        const isYounger = grade <= 6;
+        const gradeApproach = isYounger ? 'external_structure' : 'internal_accountability';
 
         // Count incidents of same type
         const sameTypeCount = incidents.filter(i => i.category === category).length;
@@ -667,20 +673,35 @@ const AI = {
         if (timeIntoSession > 45) severity = Math.min(4, severity + 1); // Late session fatigue
         if (incidents.some(i => i.severity >= 3)) severity = Math.min(4, severity + 1); // Prior major incident
 
-        // Determine action plan
+        // Get category info for messaging
+        const categoryInfo = Methodology.getCategory(category);
+        const categoryLabel = categoryInfo?.label || category;
+
+        // Grade-appropriate scripts
+        const scripts = this.getGradeAppropriateScripts(categoryLabel, severity, isYounger, incidents.length);
+
+        // Determine action plan based on grade
         let actionPlan = {
             type: 'continue',
             urgency: 'low',
-            message: 'Continue with gentle redirection.',
-            duration: null
+            message: scripts.tutorMessage,
+            scriptForStudent: scripts.studentScript,
+            duration: null,
+            showVisualFeedback: isYounger
         };
 
         if (severity >= 2 || recentIncidents.length >= 2) {
             actionPlan = {
                 type: 'break',
                 urgency: 'medium',
-                message: 'Consider a short reset break.',
-                duration: 60
+                message: isYounger
+                    ? 'Time for a reset break. Use the visual timer.'
+                    : 'Consider a brief pause to refocus.',
+                scriptForStudent: isYounger
+                    ? "We're going to take a short break to reset. Watch the timer."
+                    : "Let's pause for a moment. Take a breath and refocus.",
+                duration: 60,
+                showVisualFeedback: isYounger
             };
         }
 
@@ -688,8 +709,14 @@ const AI = {
             actionPlan = {
                 type: 'reduce_difficulty',
                 urgency: 'high',
-                message: 'Switch to easier activity or guided practice.',
-                duration: null
+                message: isYounger
+                    ? 'Switch to an easier activity. Structure is needed.'
+                    : 'Time to adjust our approach. What would help you focus?',
+                scriptForStudent: isYounger
+                    ? "We're going to try something different now. I need you to follow along."
+                    : "The current approach isn't working. What do you need to get back on track?",
+                duration: null,
+                showVisualFeedback: isYounger
             };
         }
 
@@ -698,38 +725,98 @@ const AI = {
         let stopReason = null;
         let warningLevel = 'green';
         let warningMessage = 'Session proceeding normally';
+        let incidentsToConsequence = isYounger ? Math.max(0, 5 - incidents.length - 1) : null;
 
         if (incidents.length >= 3 && severity >= 2) {
             warningLevel = 'yellow';
-            warningMessage = 'Multiple incidents - monitor closely';
+            warningMessage = isYounger
+                ? `${incidentsToConsequence} more before consequence`
+                : 'Multiple incidents - watch the pattern';
         }
 
         if (recentIncidents.length >= 4 || incidents.filter(i => i.severity >= 3).length >= 2) {
             warningLevel = 'orange';
-            warningMessage = 'Escalation pattern detected - consider ending';
+            warningMessage = isYounger
+                ? 'Close to session end - one more major incident'
+                : 'Escalation pattern - discuss with student';
+            incidentsToConsequence = isYounger ? 1 : null;
         }
 
         if (incidents.length >= 5 && severity >= 3 || incidents.filter(i => i.severity >= 4).length >= 1) {
             shouldStop = true;
-            stopReason = 'Critical threshold reached: too many significant incidents';
+            stopReason = isYounger
+                ? 'Too many incidents. We need to stop and reset for next time.'
+                : 'Session isn\'t productive. Better to end and try fresh next time.';
             warningLevel = 'red';
             warningMessage = 'SESSION STOP RECOMMENDED';
+            incidentsToConsequence = 0;
         }
 
         return {
             severity,
             severityConfidence: 0.7,
             severityReasoning: 'Determined by methodology rules (AI unavailable)',
+            gradeApproach,
             actionPlan,
             sessionStatus: {
                 shouldStop,
                 stopReason,
                 warningLevel,
-                warningMessage
+                warningMessage,
+                incidentsToConsequence
             },
             patternDetected: sameTypeCount >= 2 ? `Repeated ${category} incidents (${sameTypeCount + 1} total)` : null,
             source: 'deterministic'
         };
+    },
+
+    /**
+     * Get grade-appropriate scripts for discipline
+     */
+    getGradeAppropriateScripts(categoryLabel, severity, isYounger, incidentCount) {
+        if (isYounger) {
+            // External structure - clear, direct, immediate
+            const scripts = {
+                1: {
+                    tutorMessage: `Redirect immediately. Clear expectation.`,
+                    studentScript: `"We need to focus on our work right now."`
+                },
+                2: {
+                    tutorMessage: `State consequence. Be consistent.`,
+                    studentScript: `"If this happens again, we take a 2-minute reset break."`
+                },
+                3: {
+                    tutorMessage: `Apply consequence. Stay calm but firm.`,
+                    studentScript: `"We talked about this. Now we need to take a reset break."`
+                },
+                4: {
+                    tutorMessage: `Stop session. This is non-negotiable.`,
+                    studentScript: `"Our lesson is stopping now. We'll try again next time."`
+                }
+            };
+            return scripts[severity] || scripts[1];
+        } else {
+            // Internal accountability - ownership, logical, respectful
+            const scripts = {
+                1: {
+                    tutorMessage: `Let it pass. Focus on the work.`,
+                    studentScript: `"Let's get back to it."`
+                },
+                2: {
+                    tutorMessage: `Name the pattern. Appeal to their goals.`,
+                    studentScript: `"This is the ${incidentCount + 1}th time. What's going on?"`
+                },
+                3: {
+                    tutorMessage: `Discuss impact. Ask what they need.`,
+                    studentScript: `"We've lost about 10 minutes. How do we get back on track?"`
+                },
+                4: {
+                    tutorMessage: `End with dignity. No lectures.`,
+                    studentScript: `"This isn't working today. Let's pick it up next time."`
+                }
+            };
+            return scripts[severity] || scripts[1];
+        }
     }
 };
 

@@ -2746,3 +2746,241 @@ tr.incident-row:hover {
         width: auto;
     }
 }
+
+/* ========================
+   GRADE-AWARE DISCIPLINE STYLES
+   ======================== */
+
+/* Severity Overlay for Younger Students (Grades 1-6) */
+.severity-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.severity-display {
+    width: 90%;
+    max-width: 450px;
+    padding: var(--space-5);
+    animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.severity-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+}
+
+.severity-number {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 900;
+    color: white;
+    flex-shrink: 0;
+}
+
+.severity-info {
+    flex: 1;
+}
+
+.severity-info h2 {
+    margin: 0 0 var(--space-1) 0;
+    font-size: var(--font-size-xl);
+}
+
+.severity-name {
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+}
+
+.overlay-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Script to say section */
+.script-to-say {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.script-label {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+    font-weight: 600;
+}
+
+.script-text {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    font-style: italic;
+}
+
+/* Consequence progress bar */
+.consequence-progress {
+    margin-bottom: var(--space-4);
+}
+
+.progress-label {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-2);
+    font-weight: 500;
+}
+
+.progress-bar {
+    height: 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.5s ease-out;
+}
+
+/* Action section */
+.action-section {
+    padding: var(--space-4);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--success);
+    margin-bottom: var(--space-4);
+}
+
+.action-label {
+    font-weight: 700;
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-2);
+}
+
+.close-overlay-btn {
+    width: 100%;
+}
+
+/* Subtle toast for older students */
+.action-recommendation-toast.subtle {
+    border-left-width: 3px;
+    animation: slideInRight 0.2s ease-out;
+}
+
+.action-recommendation-toast.subtle .toast-header {
+    padding: var(--space-2) var(--space-3);
+}
+
+.action-recommendation-toast.subtle .severity-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.action-recommendation-toast.subtle .toast-body {
+    padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+.action-recommendation-toast.subtle .script-suggestion {
+    font-style: italic;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-2);
+}
+
+.action-recommendation-toast.subtle .action-hint {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-2);
+}
+
+.action-recommendation-toast.subtle .pattern-note {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+/* Severity color variations */
+.severity-overlay.severity-1 .severity-display {
+    border-top: 4px solid var(--success);
+}
+
+.severity-overlay.severity-2 .severity-display {
+    border-top: 4px solid var(--warning);
+}
+
+.severity-overlay.severity-3 .severity-display {
+    border-top: 4px solid #ff8c00;
+}
+
+.severity-overlay.severity-4 .severity-display {
+    border-top: 4px solid var(--danger);
+}
+
+/* Responsive grade-aware styles */
+@media (max-width: 768px) {
+    .severity-overlay {
+        padding: var(--space-4);
+    }
+
+    .severity-display {
+        width: 100%;
+        max-width: none;
+    }
+
+    .severity-number {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+}

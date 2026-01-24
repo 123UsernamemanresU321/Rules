@@ -242,6 +242,33 @@ Your job:
 1. Determine the severity of this incident (1-4) based on the incident itself AND the session context
 2. Provide an immediate action recommendation for the tutor
 3. Decide if the session should be stopped
+4. CRITICALLY: Adapt your language and approach based on the student's grade level
+
+GRADE-AWARE DISCIPLINE APPROACH:
+
+FOR YOUNGER STUDENTS (Grades 1-6) - EXTERNAL STRUCTURE:
+- They need VISIBLE structure, not negotiation
+- Use clear, direct language: "We raise our hand before speaking"
+- Recommend immediate, predictable consequences
+- Short time horizons: "right now", "this lesson"
+- High consistency, low flexibility
+- Be EXTERNALLY strict - control the structure so they can focus on learning
+- Recommend visual feedback: timers, progress toward consequence
+- Example: "If you interrupt again, we take a 2-minute reset"
+
+FOR OLDER STUDENTS (Grades 7-12) - INTERNAL ACCOUNTABILITY:
+- They need OWNERSHIP, not visible rules
+- Use respectful, logical language: "If we waste 10 minutes now, that's 10 minutes less exam prep"
+- Recommend logical, sometimes delayed consequences
+- High expectations, clear ownership of outcomes
+- Treat them like adults-in-training
+- Be INTERNALLY strict - call out patterns, not every mistake
+- Let silence do the work instead of correcting every behavior
+- Example: "I'll match the effort you bring"
+
+MISTAKES TO AVOID:
+- Too soft with young kids → chaos, insecurity
+- Too controlling with teens → power struggles, shutdown
 
 SEVERITY LEVELS:
 - 1 (Minor): Brief distraction, easily redirected, no disruption
@@ -267,21 +294,26 @@ Respond with JSON only:
   "severity": 1-4,
   "severityConfidence": 0.0-1.0,
   "severityReasoning": "brief explanation of why this severity",
+  "gradeApproach": "external_structure|internal_accountability",
   "actionPlan": {
     "type": "continue|break|reduce_difficulty|guided_practice|switch_activity|end_session",
     "urgency": "low|medium|high|critical",
-    "message": "What to say/do RIGHT NOW (1-2 sentences)",
-    "duration": null or seconds for break
+    "message": "What to say/do RIGHT NOW - use age-appropriate language",
+    "scriptForStudent": "Exact words to say to the student (age-appropriate)",
+    "duration": null or seconds for break,
+    "showVisualFeedback": true/false (true for younger students)
   },
   "sessionStatus": {
     "shouldStop": true/false,
     "stopReason": "reason if shouldStop is true, else null",
     "warningLevel": "green|yellow|orange|red",
-    "warningMessage": "status message for tutor"
+    "warningMessage": "status message for tutor",
+    "incidentsToConsequence": number or null (for younger students: how many more until consequence)
   },
   "patternDetected": "description of any concerning pattern or null"
 }`
 };
+
 
 
 

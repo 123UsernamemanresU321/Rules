@@ -788,6 +788,7 @@ const App = {
 
     /**
      * Show smart analysis result with action recommendation
+     * Grade-aware: prominent for younger students, subtle for older
      */
     showSmartAnalysisResult(analysis, category) {
         const urgencyColors = {
@@ -804,42 +805,130 @@ const App = {
             red: 'var(--danger)'
         };
 
-        const toast = document.createElement('div');
-        toast.className = 'action-recommendation-toast glass';
-        toast.innerHTML = `
-            <div class="toast-header">
-                <span class="icon">🤖</span>
-                <span class="title">${category.label} - Severity ${analysis.severity}</span>
-                <button class="toast-close">&times;</button>
-            </div>
-            <div class="toast-body">
-                <div class="severity-badge" style="background: ${Methodology.getSeverity(analysis.severity).color}">
-                    Level ${analysis.severity}: ${Methodology.getSeverity(analysis.severity).name}
-                </div>
-                <p class="reasoning">${analysis.severityReasoning}</p>
-                
-                <div class="action-plan" style="border-left-color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
-                    <div class="action-urgency" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
-                        ${analysis.actionPlan?.urgency?.toUpperCase() || 'SUGGESTION'}
+        const isYounger = analysis.gradeApproach === 'external_structure' ||
+            (Session.currentStudent?.grade && Session.currentStudent.grade <= 6);
+
+        if (isYounger) {
+            // PROMINENT VISUAL FEEDBACK for younger students
+            this.showYoungerStudentFeedback(analysis, category, urgencyColors, warningColors);
+        } else {
+            // SUBTLE FEEDBACK for older students
+            this.showOlderStudentFeedback(analysis, category, urgencyColors, warningColors);
+        }
+    },
+
+    /**
+     * Prominent visual feedback for younger students (Grades 1-6)
+     * External structure: visible, immediate, clear
+     */
+    showYoungerStudentFeedback(analysis, category, urgencyColors, warningColors) {
+        // Remove any existing overlay
+        document.querySelector('.severity-overlay')?.remove();
+
+        const severityInfo = Methodology.getSeverity(analysis.severity);
+        const incidentsToConsequence = analysis.sessionStatus?.incidentsToConsequence;
+
+        const overlay = document.createElement('div');
+        overlay.className = `severity-overlay severity-${analysis.severity}`;
+        overlay.innerHTML = `
+            <div class="severity-display glass">
+                <div class="severity-header">
+                    <div class="severity-number" style="background: ${severityInfo.color}">${analysis.severity}</div>
+                    <div class="severity-info">
+                        <h2>${category.label}</h2>
+                        <div class="severity-name">${severityInfo.name}</div>
                     </div>
-                    <p class="action-message">${analysis.actionPlan?.message || 'Continue monitoring.'}</p>
+                    <button class="overlay-close">&times;</button>
+                </div>
+                
+                <div class="script-to-say">
+                    <div class="script-label">📢 Say to student:</div>
+                    <div class="script-text">${analysis.actionPlan?.scriptForStudent || 'Focus on our work now.'}</div>
+                </div>
+                
+                ${incidentsToConsequence !== null && incidentsToConsequence !== undefined ? `
+                    <div class="consequence-progress">
+                        <div class="progress-label">
+                            ${incidentsToConsequence > 0
+                    ? `⚠️ ${incidentsToConsequence} more before consequence`
+                    : '🛑 Consequence reached'}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${Math.min(100, ((5 - incidentsToConsequence) / 5) * 100)}%; background: ${warningColors[analysis.sessionStatus?.warningLevel || 'green']}"></div>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="action-section" style="border-left-color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
+                    <div class="action-label" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
+                        ${analysis.actionPlan?.urgency?.toUpperCase() || 'ACTION'}
+                    </div>
+                    <p>${analysis.actionPlan?.message || 'Continue monitoring.'}</p>
                     ${analysis.actionPlan?.type === 'break' && analysis.actionPlan?.duration ? `
-                        <button class="btn btn-primary btn-small start-break-btn" data-duration="${analysis.actionPlan.duration}">
-                            Start ${analysis.actionPlan.duration}s Break
+                        <button class="btn btn-primary start-break-btn" data-duration="${analysis.actionPlan.duration}">
+                            ⏱️ Start ${analysis.actionPlan.duration}s Timer
                         </button>
                     ` : ''}
                 </div>
                 
-                <div class="session-status" style="background: ${warningColors[analysis.sessionStatus?.warningLevel || 'green']}20">
-                    <span style="color: ${warningColors[analysis.sessionStatus?.warningLevel || 'green']}">
-                        ${analysis.sessionStatus?.warningMessage || 'Session OK'}
-                    </span>
+                <button class="btn btn-secondary close-overlay-btn">Got it</button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Close handlers
+        overlay.querySelector('.overlay-close').addEventListener('click', () => overlay.remove());
+        overlay.querySelector('.close-overlay-btn').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.remove();
+        });
+
+        // Break button handler
+        overlay.querySelector('.start-break-btn')?.addEventListener('click', (e) => {
+            const duration = parseInt(e.target.dataset.duration);
+            overlay.remove();
+            this.showBreakTimer(duration);
+        });
+
+        // Auto-close after 10 seconds for minor incidents
+        if (analysis.severity <= 2) {
+            setTimeout(() => overlay.remove(), 10000);
+        }
+    },
+
+    /**
+     * Subtle feedback for older students (Grades 7-12)
+     * Internal accountability: dignified, logical, ownership-focused
+     */
+    showOlderStudentFeedback(analysis, category, urgencyColors, warningColors) {
+        const toast = document.createElement('div');
+        toast.className = 'action-recommendation-toast glass subtle';
+        toast.innerHTML = `
+            <div class="toast-header">
+                <span class="severity-indicator" style="background: ${Methodology.getSeverity(analysis.severity).color}"></span>
+                <span class="title">${category.label}</span>
+                <button class="toast-close">&times;</button>
+            </div>
+            <div class="toast-body">
+                ${analysis.actionPlan?.scriptForStudent ? `
+                    <p class="script-suggestion">"${analysis.actionPlan.scriptForStudent.replace(/"/g, '')}"</p>
+                ` : ''}
+                
+                <div class="action-hint" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
+                    ${analysis.actionPlan?.message || 'Continue as planned.'}
                 </div>
                 
                 ${analysis.patternDetected ? `
-                    <div class="pattern-warning">
-                        ⚠️ ${analysis.patternDetected}
+                    <div class="pattern-note">
+                        📊 ${analysis.patternDetected}
                     </div>
+                ` : ''}
+                
+                ${analysis.actionPlan?.type === 'break' && analysis.actionPlan?.duration ? `
+                    <button class="btn btn-small btn-secondary start-break-btn" data-duration="${analysis.actionPlan.duration}">
+                        Quick break
+                    </button>
                 ` : ''}
             </div>
         `;
@@ -856,10 +945,8 @@ const App = {
             toast.remove();
         });
 
-        // Auto-remove after 15 seconds (unless critical)
-        if (analysis.actionPlan?.urgency !== 'critical') {
-            setTimeout(() => toast.remove(), 15000);
-        }
+        // Auto-remove after 8 seconds (shorter for older students)
+        setTimeout(() => toast.remove(), 8000);
     },
 
     /**
