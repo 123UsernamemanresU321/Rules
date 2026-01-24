@@ -240,6 +240,15 @@ const App = {
                             <input type="text" id="goal1" placeholder="Goal 1" class="form-control">
                             <input type="text" id="goal2" placeholder="Goal 2" class="form-control">
                             <input type="text" id="goal3" placeholder="Goal 3" class="form-control">
+                            <button id="aiSuggestGoalsBtn" class="btn btn-ai btn-small" style="margin-top: 0.5rem;" disabled>
+                                Suggest Goals
+                            </button>
+                        </div>
+
+                        <div class="ai-quick-actions">
+                            <button id="aiPrepBriefingBtn" class="btn btn-ai" disabled>
+                                Session Prep Briefing
+                            </button>
                         </div>
 
                         <button id="startSessionBtn" class="btn btn-primary btn-large" disabled>
@@ -371,6 +380,16 @@ const App = {
                         </div>
                     </div>
 
+                    <!-- AI Quick Actions -->
+                    <div class="ai-insights-panel glass">
+                        <h3>✨ AI Assistant</h3>
+                        <div class="ai-quick-actions">
+                            <button id="aiDeescalationBtn" class="btn btn-ai">🧘 De-escalation Coach</button>
+                            <button id="aiSummaryBtn" class="btn btn-ai">📋 Generate Summary</button>
+                            <button id="aiScriptBtn" class="btn btn-ai">📝 Get Script</button>
+                        </div>
+                    </div>
+
                     <!-- Recent Incidents -->
                     <div class="recent-incidents glass">
                         <h3>Recent Incidents This Session</h3>
@@ -482,9 +501,39 @@ const App = {
 
             try {
                 await Session.startSession(studentId, mode, goals);
+                this.showDeescalationCoachButton(); // Show floating coach button
                 this.renderSessionPage();
             } catch (error) {
                 this.showError('Failed to start session');
+            }
+        });
+
+        // AI Prep Briefing button
+        const prepBriefingBtn = document.getElementById('aiPrepBriefingBtn');
+        const suggestGoalsBtn = document.getElementById('aiSuggestGoalsBtn');
+
+        // Enable AI buttons when student is selected
+        studentSelect?.addEventListener('change', () => {
+            const hasStudent = !!studentSelect.value;
+            if (prepBriefingBtn) prepBriefingBtn.disabled = !hasStudent;
+            if (suggestGoalsBtn) suggestGoalsBtn.disabled = !hasStudent;
+        });
+
+        prepBriefingBtn?.addEventListener('click', async () => {
+            const studentId = studentSelect.value;
+            if (!studentId) return;
+            const student = await DB.getStudent(studentId);
+            if (student) {
+                this.openPrepBriefing(student);
+            }
+        });
+
+        suggestGoalsBtn?.addEventListener('click', async () => {
+            const studentId = studentSelect.value;
+            if (!studentId) return;
+            const student = await DB.getStudent(studentId);
+            if (student) {
+                this.openGoalSuggestions(student);
             }
         });
     },
@@ -566,6 +615,71 @@ const App = {
                 }
             });
         });
+
+        // AI feature buttons
+        document.getElementById('aiDeescalationBtn')?.addEventListener('click', () => {
+            this.openDeescalationCoach();
+        });
+
+        document.getElementById('aiSummaryBtn')?.addEventListener('click', () => {
+            this.openSessionSummary();
+        });
+
+        document.getElementById('aiScriptBtn')?.addEventListener('click', async () => {
+            const student = Session.currentStudent;
+            if (!student) return;
+
+            const situation = {
+                description: prompt('What situation do you need a script for?') || 'General behavior redirection',
+                category: this.currentRecommendation?.category
+            };
+
+            if (situation.description) {
+                this.showAILoading('Generating Scripts');
+                const result = await AI.generateScript(situation, student);
+
+                if (!result) {
+                    this.closeAIModal();
+                    this.showError('AI scripts unavailable');
+                    return;
+                }
+
+                const modal = document.querySelector('.ai-modal');
+                if (modal) {
+                    modal.querySelector('.ai-modal-body').innerHTML = `
+                        <div class="ai-scripts">
+                            <div class="ai-script-item gentle">
+                                <div class="tone-label">Gentle</div>
+                                <p class="script-text">"${result.gentle}"</p>
+                                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.gentle.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
+                            </div>
+                            <div class="ai-script-item neutral">
+                                <div class="tone-label">Neutral</div>
+                                <p class="script-text">"${result.neutral}"</p>
+                                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.neutral.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
+                            </div>
+                            <div class="ai-script-item firm">
+                                <div class="tone-label">Firm</div>
+                                <p class="script-text">"${result.firm}"</p>
+                                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.firm.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
+                            </div>
+                        </div>
+                        ${result.tips?.length ? `
+                        <div class="insight-item" style="margin-top: 1rem;">
+                            <div class="icon">💡</div>
+                            <div class="content">
+                                <h4>Delivery Tips</h4>
+                                <ul>${result.tips.map(t => `<li>${t}</li>`).join('')}</ul>
+                            </div>
+                        </div>
+                        ` : ''}
+                    `;
+                }
+            }
+        });
+
+        // Show floating de-escalation button
+        this.showDeescalationCoachButton();
     },
 
     /**
@@ -1244,6 +1358,9 @@ const App = {
                         ` : `
                             <p class="empty-state">Not enough data for pattern analysis</p>
                         `}
+                        <button id="aiPatternInsightsBtn" class="btn btn-ai" style="margin-top: 1rem;">
+                            🤖 Get AI Pattern Insights
+                        </button>
                     </div>
 
                     <div class="report-card glass">
@@ -1321,6 +1438,11 @@ const App = {
             const report = await Export.generateSessionReport(session, student, incidents);
 
             Export.downloadReportHTML(report);
+        });
+
+        // AI Pattern Insights button
+        document.getElementById('aiPatternInsightsBtn')?.addEventListener('click', () => {
+            this.openPatternInsights();
         });
     },
 
@@ -1604,7 +1726,7 @@ const App = {
 
         // Get student's incident history
         const incidents = await Incidents.getStudentIncidents(student.id);
-        const result = await AI.getSessionPrebriefing(student, incidents);
+        const result = await AI.getSessionPrepBriefing(student, incidents);
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
