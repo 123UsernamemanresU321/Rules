@@ -10,7 +10,7 @@ compatibility_date = "2024-01-01"
 # Comma-separated list of allowed origins
 # Update this with your GitHub Pages URL after deployment
 # Example: "https://yourusername.github.io,http://localhost:8080"
-ALLOWED_ORIGINS = "http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080"
+ALLOWED_ORIGINS = "https://123usernamemanresu321.github.io,http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080"
 
 # The DEEPSEEK_API_KEY secret should be set via:
 # wrangler secret put DEEPSEEK_API_KEY
