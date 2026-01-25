@@ -1426,7 +1426,7 @@ const App = {
         // Update counters if on session page
         if (this.currentPage === 'session') {
             const { incident } = data;
-            const countEl = document.querySelector(`.quick - log - btn[data - category="${incident.category}"] .count`);
+            const countEl = document.querySelector(`.quick-log-btn[data-category="${incident.category}"] .count`);
             if (countEl) {
                 countEl.textContent = parseInt(countEl.textContent) + 1;
             }
