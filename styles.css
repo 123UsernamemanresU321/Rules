@@ -2967,6 +2967,29 @@ tr.incident-row:hover {
     border-top: 4px solid var(--danger);
 }
 
+.severity-overlay.severity-5 .severity-display {
+    border-top: 4px solid #7f1d1d;
+    background: linear-gradient(to bottom, rgba(127, 29, 29, 0.15), var(--bg-secondary));
+}
+
+/* Level 5 special styling - terminating */
+.severity-number.severity-5 {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    animation: pulse-danger 1s infinite;
+}
+
+@keyframes pulse-danger {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(127, 29, 29, 0.6);
+    }
+
+    50% {
+        box-shadow: 0 0 20px 10px rgba(127, 29, 29, 0.3);
+    }
+}
+
 /* Responsive grade-aware styles */
 @media (max-width: 768px) {
     .severity-overlay {

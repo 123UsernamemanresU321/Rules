@@ -55,31 +55,42 @@ const Methodology = {
             }
         },
 
-        // Severity definitions
+        // Severity definitions (formal 5-level system)
         severityLevels: {
             1: {
                 name: 'Minor',
-                description: 'Brief, easily correctable disruption',
+                description: 'A brief, low-impact disruption that is easily correctable with redirection and does not significantly interfere with learning.',
+                characteristics: ['Short duration', 'No intent to defy or harm', 'Stops immediately when corrected'],
                 color: '#fbbf24',
                 immediateAction: 'Redirect attention'
             },
             2: {
                 name: 'Moderate',
-                description: 'Repeated or intentional disruption',
+                description: 'A repeated or intentional disruption that interferes with learning flow but does not involve disrespect, refusal, or integrity violations.',
+                characteristics: ['Patterned behavior', 'Requires pausing instruction', 'Student understands expectations but is not meeting them'],
                 color: '#f97316',
                 immediateAction: 'Pause and address directly'
             },
             3: {
                 name: 'Major',
-                description: 'Significant disruption or disrespect',
+                description: 'A behavior that significantly disrupts instruction, shows disrespect, refusal, or misuse of systems, and requires formal intervention.',
+                characteristics: ['Clear choice by the student', 'Undermines tutor authority or session effectiveness', 'Cannot be resolved with simple redirection'],
                 color: '#ef4444',
                 immediateAction: 'Stop activity, formal intervention'
             },
             4: {
                 name: 'Critical',
-                description: 'Safety or integrity violation',
+                description: 'A violation of safety, personal boundaries, or academic integrity that prevents the session from continuing under acceptable conditions.',
+                characteristics: ['Non-negotiable boundary crossed', 'Teaching cannot continue productively or safely', 'Requires documentation and parent involvement'],
                 color: '#dc2626',
-                immediateAction: 'Session stop protocol'
+                immediateAction: 'Immediate session stop protocol'
+            },
+            5: {
+                name: 'Terminating',
+                description: 'A severe or repeated critical violation indicating that the tutoring relationship cannot continue.',
+                characteristics: ['Abuse, threats, or repeated integrity violations', 'Refusal to comply after Level 4', 'Risk to tutor, student, or program integrity'],
+                color: '#7f1d1d',
+                immediateAction: 'Termination of services'
             }
         },
 
@@ -764,7 +775,15 @@ const Methodology = {
      */
     async getConfig() {
         const customConfig = await DB.getMethodologyConfig();
-        return customConfig || this.defaultConfig;
+        if (!customConfig) {
+            return this.defaultConfig;
+        }
+        // Always use the latest severityLevels from defaultConfig (code-defined, not user-customizable)
+        // This ensures new severity levels (like Level 5) are always available
+        return {
+            ...customConfig,
+            severityLevels: this.defaultConfig.severityLevels
+        };
     },
 
     /**

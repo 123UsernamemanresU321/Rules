@@ -1329,6 +1329,10 @@ const App = {
 
     renderMethodologySeverity(config) {
         return `
+            <div class="severity-intro glass" style="margin-bottom: var(--space-4); padding: var(--space-4);">
+                <h3 style="margin-bottom: var(--space-2);">Formal Severity Definitions</h3>
+                <p style="color: var(--text-secondary); margin: 0;">Severity levels are age-agnostic. Only the <em>mapping</em> of behaviors to levels changes by grade.</p>
+            </div>
             <div class="severity-grid">
                 ${Object.entries(config.severityLevels).map(([level, info]) => `
                     <div class="severity-card glass" style="border-color: ${info.color}">
@@ -1337,7 +1341,12 @@ const App = {
                             <span class="name">${info.name}</span>
                         </div>
                         <p class="description">${info.description}</p>
-                        <p class="action"><strong>Immediate:</strong> ${info.immediateAction}</p>
+                        ${info.characteristics ? `
+                            <ul class="severity-characteristics" style="margin: var(--space-2) 0; padding-left: var(--space-4); color: var(--text-secondary); font-size: var(--font-size-sm);">
+                                ${info.characteristics.map(c => `<li>${c}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        <p class="action" style="background: var(--bg-tertiary); padding: var(--space-2); border-radius: var(--radius-sm); margin-top: var(--space-2);"><strong>Immediate:</strong> ${info.immediateAction}</p>
                     </div>
                 `).join('')}
             </div>
@@ -1367,6 +1376,7 @@ const App = {
                             <option value="2">2 Moderate</option>
                             <option value="3">3 Major</option>
                             <option value="4">4 Critical</option>
+                            <option value="5">5 Terminating</option>
                         </select>
                         <select id="filterResolved" class="form-control">
                             <option value="">All Status</option>

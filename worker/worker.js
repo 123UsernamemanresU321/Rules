@@ -238,92 +238,109 @@ Respond with JSON:
     // Smart Analyze - Auto-severity and session intelligence
     'smart-analyze': `You are analyzing a tutoring session incident to determine severity and provide real-time guidance.
 
+CRITICAL: You will receive:
+1. The CURRENT INCIDENT with its description - analyze WHAT ACTUALLY HAPPENED
+2. ALL PAST INCIDENTS in this session with their details - look for patterns
+
 Your job:
-1. Determine the severity of this incident (1-4) based on the incident itself AND the session context
-2. Provide an immediate action recommendation for the tutor
-3. Decide if the session should be stopped
-4. CRITICALLY: Adapt your language and approach based on the student's grade level
+1. READ and ANALYZE the current incident description carefully - don't just use the category
+2. Determine severity (1-5) based on WHAT HAPPENED + grade + session context
+3. Consider ALL past incidents for pattern detection
+4. Provide immediate action recommendation
+5. Adapt language for the student's grade level
 
-GRADE-AWARE DISCIPLINE APPROACH:
+---
+FORMAL SEVERITY DEFINITIONS (1-5):
+---
 
-FOR YOUNGER STUDENTS (Grades 1-6) - EXTERNAL STRUCTURE:
-- They need VISIBLE structure, not negotiation
-- Use clear, direct language: "We raise our hand before speaking"
-- Recommend immediate, predictable consequences
-- Short time horizons: "right now", "this lesson"
-- High consistency, low flexibility
-- Be EXTERNALLY strict - control the structure so they can focus on learning
-- Recommend visual feedback: timers, progress toward consequence
-- Example: "If you interrupt again, we take a 2-minute reset"
+LEVEL 1 — MINOR
+Definition: A brief, low-impact disruption that is easily correctable with redirection and does not significantly interfere with learning.
+Characteristics: Short duration, No intent to defy or harm, Stops immediately when corrected
+Immediate response: Redirect attention
 
-FOR OLDER STUDENTS (Grades 7-12) - INTERNAL ACCOUNTABILITY:
-- They need OWNERSHIP, not visible rules
-- Use respectful, logical language: "If we waste 10 minutes now, that's 10 minutes less exam prep"
-- Recommend logical, sometimes delayed consequences
-- High expectations, clear ownership of outcomes
-- Treat them like adults-in-training
-- Be INTERNALLY strict - call out patterns, not every mistake
-- Let silence do the work instead of correcting every behavior
-- Example: "I'll match the effort you bring"
+LEVEL 2 — MODERATE  
+Definition: A repeated or intentional disruption that interferes with learning flow but does not involve disrespect, refusal, or integrity violations.
+Characteristics: Patterned behavior, Requires pausing instruction, Student understands expectations but is not meeting them
+Immediate response: Pause and address directly
 
-MISTAKES TO AVOID:
-- Too soft with young kids → chaos, insecurity
-- Too controlling with teens → power struggles, shutdown
+LEVEL 3 — MAJOR
+Definition: A behavior that significantly disrupts instruction, shows disrespect, refusal, or misuse of systems, and requires formal intervention.
+Characteristics: Clear choice by the student, Undermines tutor authority or session effectiveness, Cannot be resolved with simple redirection
+Immediate response: Stop activity, formal intervention
 
-BASE SEVERITY BY CATEGORY AND GRADE (use as starting point before escalation):
+LEVEL 4 — CRITICAL
+Definition: A violation of safety, personal boundaries, or academic integrity that prevents the session from continuing under acceptable conditions.
+Characteristics: Non-negotiable boundary crossed, Teaching cannot continue productively or safely, Requires documentation and parent involvement
+Immediate response: Immediate session stop protocol
+
+LEVEL 5 — TERMINATING
+Definition: A severe or repeated critical violation indicating that the tutoring relationship cannot continue.
+Characteristics: Abuse, threats, or repeated integrity violations; Refusal to comply after Level 4; Risk to tutor, student, or program integrity
+Immediate response: Termination of services
+
+---
+BASE SEVERITY BY CATEGORY AND GRADE (starting point - can escalate):
+---
 | Behavior         | G1-2 | G3-5 | G6-8 | G9-10 | G11-13 |
 |------------------|------|------|------|-------|--------|
-| Off-task         | 1    | 1    | 2    | 2     | 3      |
-| Interrupting     | 1    | 1    | 2    | 2     | 3      |
-| Disrespect/Tone  | 2    | 3    | 4    | 4     | 4      |
+| Off-task         | 1    | 1    | 2    | 2     | 2      |
+| Interrupting     | 1    | 2    | 2    | 3     | 3      |
+| Disrespect/Tone  | 2    | 2    | 3    | 4     | 4      |
 | Refusal          | 2    | 3    | 3    | 4     | 4      |
-| Device misuse    | 2    | 3    | 4    | 4     | 4      |
-| AI/Cheating      | 1    | 2    | 3    | 4     | 4      |
-| Safety           | 3    | 3    | 4    | 4     | 4      |
+| Device misuse    | 2    | 3    | 3    | 4     | 4      |
+| AI/Cheating      | 1    | 2    | 3    | 4     | 4 (→5) |
+| Safety           | 4    | 4    | 4    | 4     | 4      |
 
-IMPORTANT: Start with the BASE severity from the table above, then adjust up based on escalation factors.
+Note: Safety is always Level 4 minimum. Can escalate to Level 5 if threats/abuse/repeated.
+AI/Cheating for G11-13 can escalate to 5 if repeated.
 
-SEVERITY LEVELS:
-- 1 (Minor): Brief distraction, easily redirected, no disruption
-- 2 (Moderate): Repeated or intentional, requires intervention, some disruption
-- 3 (Major): Significant disruption, defiance, or safety concern
-- 4 (Critical): Immediate safety risk, complete session breakdown, or extreme behavior
-
-ESCALATION FACTORS that increase severity:
+---
+ESCALATION FACTORS (increase severity):
+---
+- Incident description shows INTENT or MALICE
+- Personal attacks, insults, or verbal abuse in description
 - Multiple incidents of same type in session
-- Incidents occurring rapidly (3+ in 10 min = concern)
-- Late in session (fatigue increases severity)
-- Prior incidents in this session already moderate/major
-- Pattern of escalation (each incident worse than previous)
+- Incidents occurring rapidly (3+ in 10 min)
+- Explicit defiance or refusal in description
+- Prior Level 4 incident already occurred
+- Description mentions threats, harassment, or safety issues
 
-DE-ESCALATION FACTORS that decrease severity:
-- First incident of session
-- Long time between incidents
-- Student self-corrected quickly
-- Early in session (more energy)
+---
+GRADE-AWARE RESPONSE APPROACH:
+---
+FOR GRADES 1-6 - EXTERNAL STRUCTURE:
+- Clear, direct language
+- Immediate consequences
+- Visual feedback
+
+FOR GRADES 7-12 - INTERNAL ACCOUNTABILITY:
+- Ownership-focused language
+- Logical consequences
+- Treat as adults-in-training
 
 Respond with JSON only:
 {
-  "severity": 1-4,
+  "severity": 1-5,
   "severityConfidence": 0.0-1.0,
-  "severityReasoning": "brief explanation of why this severity",
+  "severityReasoning": "explanation referencing the ACTUAL incident description and why this severity",
   "gradeApproach": "external_structure|internal_accountability",
   "actionPlan": {
-    "type": "continue|break|reduce_difficulty|guided_practice|switch_activity|end_session",
-    "urgency": "low|medium|high|critical",
-    "message": "What to say/do RIGHT NOW - use age-appropriate language",
-    "scriptForStudent": "Exact words to say to the student (age-appropriate)",
+    "type": "continue|break|reduce_difficulty|guided_practice|switch_activity|end_session|terminate_services",
+    "urgency": "low|medium|high|critical|terminating",
+    "message": "What to say/do RIGHT NOW - age-appropriate",
+    "scriptForStudent": "Exact words to say to the student",
     "duration": null or seconds for break,
-    "showVisualFeedback": true/false (true for younger students)
+    "showVisualFeedback": true/false
   },
   "sessionStatus": {
     "shouldStop": true/false,
-    "stopReason": "reason if shouldStop is true, else null",
-    "warningLevel": "green|yellow|orange|red",
-    "warningMessage": "status message for tutor",
-    "incidentsToConsequence": number or null (for younger students: how many more until consequence)
+    "shouldTerminate": true/false,
+    "stopReason": "reason if stopping, else null",
+    "warningLevel": "green|yellow|orange|red|black",
+    "warningMessage": "status for tutor",
+    "incidentsToConsequence": number or null
   },
-  "patternDetected": "description of any concerning pattern or null"
+  "patternDetected": "description of pattern from past incidents or null"
 }`
 };
 
@@ -804,10 +821,11 @@ STUDENT RESPONSE: ${context.studentResponse || 'Unknown'}
 Provide step-by-step resolution plan.`;
 
         case 'smart-analyze':
-            // Build incident history summary
+            // Build incident history with FULL DETAILS
             const incidents = context.sessionIncidents || [];
             const incidentHistory = incidents.map((inc, i) =>
-                `  ${i + 1}. ${inc.category} (Severity ${inc.severity}) - ${inc.timeIntoSession || 0}min into session`
+                `  ${i + 1}. [${inc.category}] Severity ${inc.severity} @ ${inc.timeIntoSession || 0}min
+     Description: "${inc.description || 'No description provided'}"`
             ).join('\n') || '  None';
 
             // Calculate incident rate
@@ -817,26 +835,36 @@ Provide step-by-step resolution plan.`;
                 return (currentTime - incTime) <= 10; // Last 10 minutes
             });
 
-            return `Analyze this incident and provide severity + action guidance:
+            // Check for prior Level 4 incidents
+            const priorCritical = incidents.filter(inc => inc.severity >= 4).length;
 
-CURRENT INCIDENT:
+            return `Analyze this incident and determine severity (1-5) + action guidance:
+
+===== CURRENT INCIDENT (ANALYZE THIS) =====
 - Category: ${context.category} (${context.categoryLabel})
+- Description of what happened: "${context.description || 'No description provided'}"
 - Time into session: ${context.timeIntoSession || 0} minutes
+${context.additionalContext ? `- Additional context: "${context.additionalContext}"` : ''}
 
-STUDENT:
+READ THE DESCRIPTION CAREFULLY. The severity depends on WHAT ACTUALLY HAPPENED, not just the category.
+
+===== STUDENT INFO =====
 - Grade: ${context.grade} (${context.bandName})
 
-SESSION STATE:
+===== SESSION STATE =====
 - Total incidents so far: ${incidents.length}
 - Incidents in last 10 min: ${recentIncidents.length}
-- Session duration so far: ${context.timeIntoSession || 0} minutes
+- Prior Critical (Level 4+) incidents: ${priorCritical}
+- Session duration: ${context.timeIntoSession || 0} minutes
 
-PRIOR INCIDENTS THIS SESSION:
+===== ALL PRIOR INCIDENTS THIS SESSION (with details) =====
 ${incidentHistory}
 
-${context.additionalContext ? `ADDITIONAL CONTEXT: ${context.additionalContext}` : ''}
-
-Determine severity (1-4), provide action recommendation, and assess if session should stop.`;
+Look for patterns across all incidents. Determine severity 1-5 based on:
+1. What the current description says happened
+2. Pattern from prior incidents
+3. Student's grade
+4. Whether this escalates prior incidents`;
 
         default:
             return `Context: ${JSON.stringify(context)}`;

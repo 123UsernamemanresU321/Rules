@@ -623,6 +623,7 @@ const AI = {
         const context = {
             category: category,
             categoryLabel: categoryInfo?.label || category,
+            description: sessionContext.currentIncidentDescription || '',
             grade: student?.grade || 6,
             bandName: bandInfo?.name || 'Unknown',
             timeIntoSession: sessionContext.timeIntoSession || 0,
@@ -664,14 +665,27 @@ const AI = {
             return (timeIntoSession - incTime) <= 10;
         });
 
+        // Check for prior Level 4+ incidents (for escalation to Level 5)
+        const priorCriticalCount = incidents.filter(i => i.severity >= 4).length;
+
         // Get grade-aware BASE severity (not starting at 1!)
         let severity = this.getGradeAwareBaseSeverity(category, grade);
 
-        // Escalation factors (can still increase from base)
+        // Escalation factors (can increase from base, max 4 for regular escalation)
         if (sameTypeCount >= 2) severity = Math.min(4, severity + 1);
         if (recentIncidents.length >= 3) severity = Math.min(4, severity + 1);
         if (timeIntoSession > 45) severity = Math.min(4, severity + 1); // Late session fatigue
         if (incidents.some(i => i.severity >= 3)) severity = Math.min(4, severity + 1); // Prior major incident
+
+        // Level 5 escalation conditions (very serious - terminating)
+        // Only escalate to 5 if: prior Level 4 exists AND this is also severe
+        if (priorCriticalCount >= 1 && severity >= 4) {
+            severity = 5; // Terminating - relationship cannot continue
+        }
+        // Repeated same-category critical incidents
+        if (sameTypeCount >= 2 && incidents.filter(i => i.category === category && i.severity >= 4).length >= 1) {
+            severity = 5;
+        }
 
         // Get category info for messaging
         const categoryInfo = Methodology.getCategory(category);
@@ -792,6 +806,10 @@ const AI = {
                 4: {
                     tutorMessage: `Stop session. This is non-negotiable.`,
                     studentScript: `"Our lesson is stopping now. We'll try again next time."`
+                },
+                5: {
+                    tutorMessage: `Terminate services. Document everything. Contact parent immediately.`,
+                    studentScript: `"I'm very sorry, but we won't be able to continue our lessons."`
                 }
             };
             return scripts[severity] || scripts[1];
@@ -813,6 +831,10 @@ const AI = {
                 4: {
                     tutorMessage: `End with dignity. No lectures.`,
                     studentScript: `"This isn't working today. Let's pick it up next time."`
+                },
+                5: {
+                    tutorMessage: `Terminate services professionally. Document. This is a professional boundary.`,
+                    studentScript: `"I need to discuss with your parents. Our tutoring arrangement will need to end."`
                 }
             };
             return scripts[severity] || scripts[1];
@@ -825,36 +847,43 @@ const AI = {
      * because understanding, accountability, and stakes increase with age.
      * 
      * Grade bands: 1-2, 3-5, 6-8, 9-10, 11-13
-     * Severity: 1 (Minor), 2 (Moderate), 3 (Major), 4 (Critical)
+     * Severity: 1 (Minor), 2 (Moderate), 3 (Major), 4 (Critical), 5 (Terminating)
+     * 
+     * Note: Base severity is the MINIMUM. Can escalate based on:
+     * - Repetition
+     * - Intent
+     * - Refusal to comply
+     * - Prior incidents
      */
     getGradeAwareBaseSeverity(category, grade) {
         // Severity matrix by category and grade band
         // Format: [G1-2, G3-5, G6-8, G9-10, G11-13]
         const severityMatrix = {
-            // Off-task: Minor for young, increases with age
-            'FOCUS_OFF_TASK': [1, 1, 2, 2, 3],
+            // Off-task: developmental early, effort/choice issue later
+            'FOCUS_OFF_TASK': [1, 1, 2, 2, 2],
 
-            // Interrupting: More serious as student should know better with age
-            'INTERRUPTING': [1, 1, 2, 2, 3],
+            // Interrupting: impulse → disrespect as age increases
+            'INTERRUPTING': [1, 2, 2, 3, 3],
 
-            // Disrespect/Tone: Personal abuse - scales significantly with age
-            'DISRESPECT_TONE': [2, 3, 4, 4, 4],
+            // Disrespect/Tone: boundary issue once social awareness develops
+            'DISRESPECT_TONE': [2, 2, 3, 4, 4],
 
-            // Non-compliance/Refusal: Defiance becomes more serious with age
+            // Refusal: control/authority challenge, escalates quickly with age
             'NON_COMPLIANCE': [2, 3, 3, 4, 4],
 
-            // Device misuse: Willful distraction - scales with age
-            'TECH_MISUSE': [2, 3, 4, 4, 4],
+            // Device misuse: older students fully accountable for time misuse
+            'TECH_MISUSE': [2, 3, 3, 4, 4],
 
-            // Academic integrity: Severity increases dramatically with age
-            // Young kids don't understand authorship; older students know it's wrong
+            // Academic integrity: scales with understanding of authorship + academic stakes
+            // Note: Can escalate to 5 if repeated for G11-13
             'ACADEMIC_INTEGRITY': [1, 2, 3, 4, 4],
 
-            // Safety: Always serious, but even more so with age
-            'SAFETY_BOUNDARY': [3, 3, 4, 4, 4],
+            // Safety: age-independent, always Level 4
+            // Can escalate to 5 if threats/abuse/repeated
+            'SAFETY_BOUNDARY': [4, 4, 4, 4, 4],
 
-            // Other: Default progression
-            'OTHER': [1, 1, 2, 2, 3]
+            // Other: default progression
+            'OTHER': [1, 1, 2, 2, 2]
         };
 
         // Determine grade band index (0-4)
