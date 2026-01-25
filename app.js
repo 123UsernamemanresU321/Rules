@@ -747,7 +747,8 @@ const App = {
                     student: Session.currentStudent,
                     timeIntoSession: Math.floor(sessionSummary.durationSeconds / 60),
                     incidents: sessionSummary.incidents || [],
-                    additionalContext: description
+                    additionalContext: description,
+                    currentIncidentDescription: description
                 };
 
                 // Get AI analysis (or deterministic fallback)
@@ -763,14 +764,16 @@ const App = {
 
                 modal.remove();
 
-                // Show action recommendation
-                this.showSmartAnalysisResult(analysis, cat);
-
-                // Check if session should stop
-                if (analysis.sessionStatus?.shouldStop) {
-                    this.showEmergencyStop(analysis.sessionStatus.stopReason);
+                // Handle based on severity level
+                if (analysis.severity >= 5) {
+                    // Level 5: Terminating - show termination overlay and draft email
+                    this.showTerminationOverlay(analysis, result.incident);
+                } else if (analysis.severity >= 4) {
+                    // Level 4: Critical - auto session stop, draft email, but timer continues
+                    this.showSessionStopOverlay(analysis, result.incident);
                 } else {
-                    // Refresh the page
+                    // Level 1-3: Show feedback and refresh
+                    this.showSmartAnalysisResult(analysis, cat);
                     this.renderSessionPage();
                 }
 
@@ -820,13 +823,17 @@ const App = {
     /**
      * Prominent visual feedback for younger students (Grades 1-6)
      * External structure: visible, immediate, clear
+     * Features milestone-based progress bar toward consequences
      */
     showYoungerStudentFeedback(analysis, category, urgencyColors, warningColors) {
         // Remove any existing overlay
         document.querySelector('.severity-overlay')?.remove();
 
         const severityInfo = Methodology.getSeverity(analysis.severity);
-        const incidentsToConsequence = analysis.sessionStatus?.incidentsToConsequence;
+
+        // Calculate progress based on cumulative severity
+        // L1=+10%, L2=+25%, L3=+50%, L4=100%
+        const progressPercent = this.calculateConsequenceProgress();
 
         const overlay = document.createElement('div');
         overlay.className = `severity-overlay severity-${analysis.severity}`;
@@ -846,18 +853,38 @@ const App = {
                     <div class="script-text">${analysis.actionPlan?.scriptForStudent || 'Focus on our work now.'}</div>
                 </div>
                 
-                ${incidentsToConsequence !== null && incidentsToConsequence !== undefined ? `
-                    <div class="consequence-progress">
-                        <div class="progress-label">
-                            ${incidentsToConsequence > 0
-                    ? `⚠️ ${incidentsToConsequence} more before consequence`
-                    : '🛑 Consequence reached'}
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${Math.min(100, ((5 - incidentsToConsequence) / 5) * 100)}%; background: ${warningColors[analysis.sessionStatus?.warningLevel || 'green']}"></div>
+                <!-- Milestone Progress Bar -->
+                <div class="consequence-progress-milestones">
+                    <div class="progress-label">⚡ Consequence Progress</div>
+                    <div class="milestone-bar">
+                        <div class="milestone-fill" style="width: ${progressPercent}%"></div>
+                        <div class="milestone-markers">
+                            <div class="milestone" style="left: 25%">
+                                <div class="milestone-tick ${progressPercent >= 25 ? 'reached' : ''}"></div>
+                                <div class="milestone-label">Verbal</div>
+                            </div>
+                            <div class="milestone" style="left: 50%">
+                                <div class="milestone-tick ${progressPercent >= 50 ? 'reached' : ''}"></div>
+                                <div class="milestone-label">Consequence</div>
+                            </div>
+                            <div class="milestone" style="left: 75%">
+                                <div class="milestone-tick ${progressPercent >= 75 ? 'reached' : ''}"></div>
+                                <div class="milestone-label">Parent</div>
+                            </div>
+                            <div class="milestone" style="left: 100%">
+                                <div class="milestone-tick ${progressPercent >= 100 ? 'reached' : ''}"></div>
+                                <div class="milestone-label">Stop</div>
+                            </div>
                         </div>
                     </div>
-                ` : ''}
+                    <div class="progress-status ${progressPercent >= 100 ? 'critical' : progressPercent >= 75 ? 'warning' : ''}">
+                        ${progressPercent >= 100 ? '🛑 Session Stop Reached' :
+                progressPercent >= 75 ? '⚠️ Next: Session Stop' :
+                    progressPercent >= 50 ? '📞 Next: Parent Contact' :
+                        progressPercent >= 25 ? '⚡ Next: Consequence' :
+                            '🔔 Next: Verbal Warning'}
+                    </div>
+                </div>
                 
                 <div class="action-section" style="border-left-color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
                     <div class="action-label" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
@@ -895,6 +922,29 @@ const App = {
         if (analysis.severity <= 2) {
             setTimeout(() => overlay.remove(), 10000);
         }
+    },
+
+    /**
+     * Calculate consequence progress as percentage (0-100)
+     * Based on cumulative severity: L1=+10%, L2=+25%, L3=+50%, L4=100%
+     */
+    calculateConsequenceProgress() {
+        if (!Session.currentSession) return 0;
+
+        const incidents = Session.currentSession.incidents || [];
+        let progress = 0;
+
+        for (const incident of incidents) {
+            switch (incident.severity) {
+                case 1: progress += 10; break;
+                case 2: progress += 25; break;
+                case 3: progress += 50; break;
+                case 4: progress = 100; break; // L4 = instant full
+                case 5: progress = 100; break; // L5 not on bar but still full
+            }
+        }
+
+        return Math.min(100, progress);
     },
 
     /**
@@ -950,7 +1000,293 @@ const App = {
     },
 
     /**
-     * Show emergency session stop overlay
+     * Show Level 4 Session Stop Overlay
+     * Session timer CONTINUES after dismissal (doesn't auto-end)
+     * Triggers AI email drafting for parent notification
+     */
+    async showSessionStopOverlay(analysis, incident) {
+        // Pause the timer temporarily but session continues
+        Session.pauseTimer();
+
+        // Remove any existing overlays
+        document.querySelector('.emergency-stop-overlay')?.remove();
+        document.querySelector('.session-stop-overlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'session-stop-overlay level-4';
+        overlay.innerHTML = `
+            <div class="stop-content glass">
+                <div class="stop-header">
+                    <div class="stop-icon">🛑</div>
+                    <h1>LEVEL 4 - SESSION STOP</h1>
+                </div>
+                
+                <div class="stop-details">
+                    <div class="severity-badge critical">CRITICAL</div>
+                    <p class="stop-reason">${analysis.severityReasoning || 'Critical incident requires session pause'}</p>
+                    <div class="stop-time">${new Date().toLocaleTimeString()}</div>
+                </div>
+                
+                <div class="stop-script">
+                    <div class="script-label">📢 Say to student:</div>
+                    <div class="script-text">${analysis.actionPlan?.scriptForStudent || 'Our lesson is stopping now. We will try again next time.'}</div>
+                </div >
+                
+                <div class="email-draft-section">
+                    <div class="email-status">
+                        <span class="loading-spinner"></span>
+                        <span>AI is drafting parent email...</span>
+                    </div>
+                    <div class="email-preview hidden"></div>
+                </div>
+                
+                <div class="stop-actions">
+                    <button class="btn btn-secondary continue-session-btn">Continue Session (Timer Runs)</button>
+                    <button class="btn btn-primary end-session-btn">End Session Now</button>
+                </div>
+            </div >
+    `;
+
+        document.body.appendChild(overlay);
+
+        // Play alert sound
+        this.playAlertSound();
+
+        // Draft AI email in background
+        this.draftCriticalIncidentEmail(incident, overlay);
+
+        // Continue session handler (timer keeps running for more incidents)
+        overlay.querySelector('.continue-session-btn').addEventListener('click', () => {
+            overlay.remove();
+            Session.resumeTimer(); // Resume the timer
+            this.renderSessionPage();
+            this.showSuccess('Session continuing. Timer is running. You can log more incidents if needed.');
+        });
+
+        // End session handler
+        overlay.querySelector('.end-session-btn').addEventListener('click', async () => {
+            overlay.remove();
+            await Session.endSession();
+            this.hideDeescalationCoachButton();
+            this.renderSessionPage();
+            this.showSuccess('Session ended. Email draft is ready.');
+        });
+    },
+
+    /**
+     * Show Level 5 Termination Overlay
+     * Triggers AI email drafting for service termination notice
+     */
+    async showTerminationOverlay(analysis, incident) {
+        // Pause timer
+        Session.pauseTimer();
+
+        // Remove any existing overlays
+        document.querySelector('.emergency-stop-overlay')?.remove();
+        document.querySelector('.session-stop-overlay')?.remove();
+        document.querySelector('.termination-overlay')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'termination-overlay level-5';
+        overlay.innerHTML = `
+    < div class="termination-content glass" >
+                <div class="termination-header">
+                    <div class="termination-icon">⛔</div>
+                    <h1>LEVEL 5 - SERVICE TERMINATION</h1>
+                </div>
+                
+                <div class="termination-details">
+                    <div class="severity-badge terminating">TERMINATING</div>
+                    <p class="termination-reason">${analysis.severityReasoning || 'Severe or repeated violations - tutoring relationship cannot continue'}</p>
+                    <div class="termination-time">${new Date().toLocaleTimeString()}</div>
+                </div>
+                
+                <div class="termination-script">
+                    <div class="script-label">📢 Say to student:</div>
+                    <div class="script-text">${analysis.actionPlan?.scriptForStudent || 'I need to discuss with your parents. Our tutoring arrangement will need to end.'}</div>
+                </div>
+                
+                <div class="email-draft-section">
+                    <div class="email-status">
+                        <span class="loading-spinner"></span>
+                        <span>AI is drafting termination notice...</span>
+                    </div>
+                    <div class="email-preview hidden"></div>
+                </div>
+                
+                <div class="termination-actions">
+                    <button class="btn btn-primary end-session-btn">End Session & Confirm Termination</button>
+                </div>
+            </div >
+    `;
+
+        document.body.appendChild(overlay);
+
+        // Play critical alert sound
+        this.playAlertSound();
+
+        // Draft AI termination email
+        this.draftTerminationEmail(incident, overlay);
+
+        // End session handler
+        overlay.querySelector('.end-session-btn').addEventListener('click', async () => {
+            overlay.remove();
+            await Session.endSession();
+            this.hideDeescalationCoachButton();
+            this.renderSessionPage();
+            this.showSuccess('Session ended. Termination email draft is ready.');
+        });
+    },
+
+    /**
+     * Draft critical incident email (Level 4) via AI
+     */
+    async draftCriticalIncidentEmail(incident, overlay) {
+        const emailSection = overlay.querySelector('.email-draft-section');
+        const statusEl = emailSection.querySelector('.email-status');
+        const previewEl = emailSection.querySelector('.email-preview');
+
+        try {
+            // Get all session incidents
+            const sessionSummary = await Session.getSessionSummary();
+            const allIncidents = sessionSummary.incidents || [];
+
+            // Call AI to draft email
+            const emailResult = await AI.draftCriticalIncidentEmail(
+                incident,
+                Session.currentStudent,
+                allIncidents
+            );
+
+            if (emailResult) {
+                statusEl.classList.add('hidden');
+                previewEl.classList.remove('hidden');
+                previewEl.innerHTML = `
+    < div class="email-preview-card" >
+                        <div class="email-subject"><strong>Subject:</strong> ${emailResult.subject}</div>
+                        <div class="email-body">${emailResult.email.substring(0, 300)}...</div>
+                        <div class="email-actions">
+                            <button class="btn btn-small copy-email-btn">📋 Copy Full Email</button>
+                            <button class="btn btn-small view-email-btn">👁️ View Full</button>
+                        </div>
+                    </div >
+    `;
+
+                // Copy email handler
+                previewEl.querySelector('.copy-email-btn')?.addEventListener('click', () => {
+                    const fullText = `Subject: ${emailResult.subject} \n\n${emailResult.email} `;
+                    navigator.clipboard.writeText(fullText);
+                    this.showSuccess('Email copied to clipboard');
+                });
+
+                // View full email handler
+                previewEl.querySelector('.view-email-btn')?.addEventListener('click', () => {
+                    this.showFullEmailModal(emailResult);
+                });
+            }
+        } catch (error) {
+            statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
+        }
+    },
+
+    /**
+     * Draft termination email (Level 5) via AI
+     */
+    async draftTerminationEmail(incident, overlay) {
+        const emailSection = overlay.querySelector('.email-draft-section');
+        const statusEl = emailSection.querySelector('.email-status');
+        const previewEl = emailSection.querySelector('.email-preview');
+
+        try {
+            // Get ALL incidents for this student (not just session)
+            const allStudentIncidents = await DB.getIncidentsByStudent(Session.currentStudent.id);
+
+            // Call AI to draft termination email
+            const emailResult = await AI.draftTerminationEmail(
+                incident,
+                Session.currentStudent,
+                allStudentIncidents
+            );
+
+            if (emailResult) {
+                statusEl.classList.add('hidden');
+                previewEl.classList.remove('hidden');
+                previewEl.innerHTML = `
+    < div class="email-preview-card termination" >
+                        <div class="email-subject"><strong>Subject:</strong> ${emailResult.subject}</div>
+                        <div class="email-body">${emailResult.email.substring(0, 300)}...</div>
+                        <div class="email-actions">
+                            <button class="btn btn-small copy-email-btn">📋 Copy Full Email</button>
+                            <button class="btn btn-small view-email-btn">👁️ View Full</button>
+                        </div>
+                    </div >
+    `;
+
+                // Copy email handler
+                previewEl.querySelector('.copy-email-btn')?.addEventListener('click', () => {
+                    const fullText = `Subject: ${emailResult.subject} \n\n${emailResult.email} `;
+                    navigator.clipboard.writeText(fullText);
+                    this.showSuccess('Termination email copied to clipboard');
+                });
+
+                // View full email handler
+                previewEl.querySelector('.view-email-btn')?.addEventListener('click', () => {
+                    this.showFullEmailModal(emailResult);
+                });
+            }
+        } catch (error) {
+            statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
+        }
+    },
+
+    /**
+     * Show full email in a modal
+     */
+    showFullEmailModal(emailResult) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop';
+        modal.innerHTML = `
+    < div class="modal glass email-modal" >
+                <div class="modal-header">
+                    <h3>📧 ${emailResult.subject}</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="full-email-content">${emailResult.email.replace(/\n/g, '<br>')}</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary copy-all-btn">📋 Copy to Clipboard</button>
+                    <button class="btn btn-secondary close-btn">Close</button>
+                </div>
+            </div >
+    `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
+        modal.querySelector('.close-btn').addEventListener('click', () => modal.remove());
+        modal.querySelector('.copy-all-btn').addEventListener('click', () => {
+            const fullText = `Subject: ${emailResult.subject} \n\n${emailResult.email} `;
+            navigator.clipboard.writeText(fullText);
+            this.showSuccess('Email copied!');
+        });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /**
+     * Play alert sound for critical incidents
+     */
+    playAlertSound() {
+        try {
+            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQ==');
+            audio.play().catch(() => { });
+        } catch (e) { }
+    },
+
+    /**
+     * Show emergency session stop overlay (legacy - kept for compatibility)
      */
     showEmergencyStop(reason) {
         // Pause the timer
@@ -962,22 +1298,19 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'emergency-stop-overlay';
         overlay.innerHTML = `
-            <div class="emergency-content">
+    < div class="emergency-content" >
                 <div class="stop-icon">🛑</div>
                 <h1>SESSION STOPPED</h1>
                 <p class="stop-reason">${reason || 'Critical threshold reached'}</p>
                 <div class="stop-time">${new Date().toLocaleTimeString()}</div>
                 <button class="btn btn-large acknowledge-btn">Acknowledge & End Session</button>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(overlay);
 
         // Play alert sound if available
-        try {
-            const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQ==');
-            audio.play().catch(() => { }); // Ignore if audio fails
-        } catch (e) { }
+        this.playAlertSound();
 
         // Acknowledge handler
         overlay.querySelector('.acknowledge-btn').addEventListener('click', async () => {
@@ -1002,26 +1335,26 @@ const App = {
         const toast = document.createElement('div');
         toast.className = 'incident-toast glass';
         toast.innerHTML = `
-            <div class="toast-header">
+    < div class="toast-header" >
                 <span class="icon">${analysis.source === 'ai' ? '🤖' : '📊'}</span>
                 <span>Incident Logged - ${analysis.source === 'ai' ? 'AI Recommendation' : 'Standard Response'}</span>
                 <button class="toast-close">&times;</button>
-            </div>
-            <div class="toast-body">
-                <div class="rec-item">
-                    <strong>Immediate Action:</strong> ${analysis.recommendedStep}
-                </div>
-                <div class="rec-item">
-                    <strong>Recommended Script:</strong>
-                    <div class="script-preview">"${analysis.scripts[analysis.recommendedTone] || analysis.scripts.neutral}"</div>
-                </div>
-                ${analysis.preventionTip ? `
+            </div >
+    <div class="toast-body">
+        <div class="rec-item">
+            <strong>Immediate Action:</strong> ${analysis.recommendedStep}
+        </div>
+        <div class="rec-item">
+            <strong>Recommended Script:</strong>
+            <div class="script-preview">"${analysis.scripts[analysis.recommendedTone] || analysis.scripts.neutral}"</div>
+        </div>
+        ${analysis.preventionTip ? `
                     <div class="rec-item">
                         <strong>Prevention Tip:</strong> ${analysis.preventionTip}
                     </div>
                 ` : ''}
-            </div>
-        `;
+    </div>
+`;
 
         document.body.appendChild(toast);
 
@@ -1039,13 +1372,13 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'break-overlay';
         overlay.innerHTML = `
-            <div class="break-timer-display glass">
+    < div class="break-timer-display glass" >
                 <h2>Reset Break</h2>
                 <div class="break-countdown">${Utils.formatDuration(duration)}</div>
                 <p>Take a breath. Reset expectations.</p>
                 <button class="btn btn-secondary" id="endBreakBtn">End Early</button>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(overlay);
 
@@ -1093,7 +1426,7 @@ const App = {
         // Update counters if on session page
         if (this.currentPage === 'session') {
             const { incident } = data;
-            const countEl = document.querySelector(`.quick-log-btn[data-category="${incident.category}"] .count`);
+            const countEl = document.querySelector(`.quick - log - btn[data - category="${incident.category}"] .count`);
             if (countEl) {
                 countEl.textContent = parseInt(countEl.textContent) + 1;
             }
@@ -1117,7 +1450,7 @@ const App = {
         const rules = Methodology.getRules(band);
 
         main.innerHTML = `
-            <div class="page-rules">
+    < div class="page-rules" >
                 <div class="rules-header glass">
                     <h2>Universal Session Rules</h2>
                     <p>These rules apply to all tutoring sessions.</p>
@@ -1148,19 +1481,19 @@ const App = {
                         📺 Show Fullscreen Rules Card
                     </button>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         // Band selector
         document.getElementById('ruleBandSelect')?.addEventListener('change', (e) => {
             const newRules = Methodology.getRules(e.target.value);
             document.getElementById('rulesGrid').innerHTML = newRules.map(r => `
-                <div class="rule-card glass">
+    < div class="rule-card glass" >
                     <span class="rule-icon">${r.icon}</span>
                     <h3>${r.rule}</h3>
                     <p>${r.description}</p>
-                </div>
-            `).join('');
+                </div >
+    `).join('');
         });
 
         // Fullscreen button
@@ -1178,7 +1511,7 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'fullscreen-overlay';
         overlay.innerHTML = `
-            <div class="fullscreen-rules">
+    < div class="fullscreen-rules" >
                 <h1>📚 Session Rules</h1>
                 <div class="fullscreen-rules-grid">
                     ${rules.map(r => `
@@ -1189,8 +1522,8 @@ const App = {
                     `).join('')}
                 </div>
                 <p class="fullscreen-cta">Let's have a great session! 🌟</p>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(overlay);
 
@@ -1222,7 +1555,7 @@ const App = {
         const categories = Methodology.getCategoryKeys();
 
         main.innerHTML = `
-            <div class="page-methodology">
+    < div class="page-methodology" >
                 <div class="methodology-header glass">
                     <h2>Discipline Methodology</h2>
                     <p>Grade-aware discipline ladder system with escalation paths and scripts.</p>
@@ -1237,8 +1570,8 @@ const App = {
                 <div class="methodology-content" id="methodologyContent">
                     ${this.renderMethodologyBands(config)}
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         // Tab handlers
         document.querySelectorAll('.methodology-tabs .tab-btn').forEach(btn => {
@@ -1264,8 +1597,8 @@ const App = {
 
     renderMethodologyBands(config) {
         return `
-            <div class="bands-grid">
-                ${Object.entries(config.gradeBands).map(([key, band]) => `
+    < div class="bands-grid" >
+        ${Object.entries(config.gradeBands).map(([key, band]) => `
                     <div class="band-card glass band-${key.toLowerCase()}">
                         <h3>Band ${key}: ${band.name}</h3>
                         <p class="grades">Grades ${band.grades.join(', ')}</p>
@@ -1276,15 +1609,16 @@ const App = {
                             <li>Session Stop: Consider at ${band.sessionStopThreshold * 2} incidents</li>
                         </ul>
                     </div>
-                `).join('')}
-            </div>
-        `;
+                `).join('')
+            }
+            </div >
+    `;
     },
 
     renderMethodologyCategories(config) {
         return `
-            <div class="categories-accordion">
-                ${Object.entries(config.categories).map(([key, cat]) => `
+    < div class="categories-accordion" >
+        ${Object.entries(config.categories).map(([key, cat]) => `
                     <details class="category-item glass">
                         <summary>
                             <span class="icon">${cat.icon}</span>
@@ -1322,19 +1656,20 @@ const App = {
                             </div>
                         </div>
                     </details>
-                `).join('')}
-            </div>
-        `;
+                `).join('')
+            }
+            </div >
+    `;
     },
 
     renderMethodologySeverity(config) {
         return `
-            <div class="severity-intro glass" style="margin-bottom: var(--space-4); padding: var(--space-4);">
+    < div class="severity-intro glass" style = "margin-bottom: var(--space-4); padding: var(--space-4);" >
                 <h3 style="margin-bottom: var(--space-2);">Formal Severity Definitions</h3>
                 <p style="color: var(--text-secondary); margin: 0;">Severity levels are age-agnostic. Only the <em>mapping</em> of behaviors to levels changes by grade.</p>
-            </div>
-            <div class="severity-grid">
-                ${Object.entries(config.severityLevels).map(([level, info]) => `
+            </div >
+    <div class="severity-grid">
+        ${Object.entries(config.severityLevels).map(([level, info]) => `
                     <div class="severity-card glass" style="border-color: ${info.color}">
                         <div class="severity-header" style="background: ${info.color}">
                             <span class="level">${level}</span>
@@ -1349,8 +1684,8 @@ const App = {
                         <p class="action" style="background: var(--bg-tertiary); padding: var(--space-2); border-radius: var(--radius-sm); margin-top: var(--space-2);"><strong>Immediate:</strong> ${info.immediateAction}</p>
                     </div>
                 `).join('')}
-            </div>
-        `;
+    </div>
+`;
     },
 
     /**
@@ -1359,13 +1694,28 @@ const App = {
     async renderIncidentsPage() {
         const main = document.getElementById('mainContent');
         const incidents = await Incidents.getAllIncidents();
+        const students = await DB.getAllStudents();
         const categories = Methodology.getCategoryButtons();
 
+        // Group incidents by student
+        const incidentsByStudent = {};
+        incidents.forEach(inc => {
+            const studentId = inc.studentId || 'unknown';
+            if (!incidentsByStudent[studentId]) {
+                incidentsByStudent[studentId] = [];
+            }
+            incidentsByStudent[studentId].push(inc);
+        });
+
         main.innerHTML = `
-            <div class="page-incidents">
+    < div class="page-incidents" >
                 <div class="incidents-header glass">
                     <h2>Incident History</h2>
                     <div class="incidents-filters">
+                        <select id="filterStudent" class="form-control">
+                            <option value="">All Students</option>
+                            ${students.map(s => `<option value="${s.id}">${Utils.escapeHTML(s.name)} (Grade ${s.grade})</option>`).join('')}
+                        </select>
                         <select id="filterCategory" class="form-control">
                             <option value="">All Categories</option>
                             ${categories.map(c => `<option value="${c.key}">${c.icon} ${c.label}</option>`).join('')}
@@ -1378,38 +1728,245 @@ const App = {
                             <option value="4">4 Critical</option>
                             <option value="5">5 Terminating</option>
                         </select>
-                        <select id="filterResolved" class="form-control">
-                            <option value="">All Status</option>
-                            <option value="false">Unresolved</option>
-                            <option value="true">Resolved</option>
-                        </select>
                     </div>
                 </div>
 
-                <div class="incidents-list glass" id="incidentsList">
-                    ${this.renderIncidentsList(incidents)}
+                <div class="incidents-by-student" id="incidentsByStudent">
+                    ${this.renderIncidentsByStudent(incidentsByStudent, students)}
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         // Filter handlers
         const applyFilters = async () => {
+            const studentFilter = document.getElementById('filterStudent').value || null;
+            const categoryFilter = document.getElementById('filterCategory').value || null;
+            const severityFilter = document.getElementById('filterSeverity').value || null;
+
             const filters = {
-                category: document.getElementById('filterCategory').value || null,
-                severity: document.getElementById('filterSeverity').value || null,
-                resolved: document.getElementById('filterResolved').value === '' ? undefined :
-                    document.getElementById('filterResolved').value === 'true'
+                studentId: studentFilter,
+                category: categoryFilter,
+                severity: severityFilter ? parseInt(severityFilter) : null
             };
+
             const filtered = await Incidents.getAllIncidents(filters);
-            document.getElementById('incidentsList').innerHTML = this.renderIncidentsList(filtered);
+
+            // Regroup by student
+            const filteredByStudent = {};
+            filtered.forEach(inc => {
+                const studentId = inc.studentId || 'unknown';
+                if (!filteredByStudent[studentId]) {
+                    filteredByStudent[studentId] = [];
+                }
+                filteredByStudent[studentId].push(inc);
+            });
+
+            document.getElementById('incidentsByStudent').innerHTML =
+                this.renderIncidentsByStudent(filteredByStudent, students, studentFilter);
             this.setupIncidentRowHandlers();
+            this.setupPdfExportHandlers();
         };
 
+        document.getElementById('filterStudent')?.addEventListener('change', applyFilters);
         document.getElementById('filterCategory')?.addEventListener('change', applyFilters);
         document.getElementById('filterSeverity')?.addEventListener('change', applyFilters);
-        document.getElementById('filterResolved')?.addEventListener('change', applyFilters);
 
         this.setupIncidentRowHandlers();
+        this.setupPdfExportHandlers();
+    },
+
+    /**
+     * Render incidents grouped by student
+     */
+    renderIncidentsByStudent(incidentsByStudent, students, filterStudentId = null) {
+        const studentMap = {};
+        students.forEach(s => studentMap[s.id] = s);
+
+        // If filtering by specific student, show only that student
+        const studentIds = filterStudentId
+            ? [filterStudentId]
+            : Object.keys(incidentsByStudent);
+
+        if (studentIds.length === 0 || (filterStudentId && !incidentsByStudent[filterStudentId])) {
+            return '<p class="empty-state">No incidents found</p>';
+        }
+
+        return studentIds.map(studentId => {
+            const studentIncidents = incidentsByStudent[studentId] || [];
+            if (studentIncidents.length === 0) return '';
+
+            const student = studentMap[studentId];
+            const studentName = student?.name || 'Unknown Student';
+            const studentGrade = student?.grade || 'N/A';
+
+            // Calculate stats
+            const criticalCount = studentIncidents.filter(i => i.severity >= 4).length;
+            const unresolvedCount = studentIncidents.filter(i => !i.resolved).length;
+
+            return `
+    < div class="student-incidents-section glass" data - student - id="${studentId}" >
+                    <div class="student-header">
+                        <div class="student-info">
+                            <h3>${Utils.escapeHTML(studentName)}</h3>
+                            <span class="student-grade">Grade ${studentGrade}</span>
+                            <span class="incident-count">${studentIncidents.length} incident${studentIncidents.length !== 1 ? 's' : ''}</span>
+                            ${criticalCount > 0 ? `<span class="critical-badge">${criticalCount} critical</span>` : ''}
+                            ${unresolvedCount > 0 ? `<span class="unresolved-badge">${unresolvedCount} unresolved</span>` : ''}
+                        </div>
+                        <div class="student-actions">
+                            <button class="btn btn-small btn-secondary export-pdf-btn" data-student-id="${studentId}">
+                                📄 Export PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="student-incidents-table">
+                        ${this.renderIncidentsList(studentIncidents)}
+                    </div>
+                </div >
+    `;
+        }).join('');
+    },
+
+    /**
+     * Setup PDF export button handlers
+     */
+    setupPdfExportHandlers() {
+        document.querySelectorAll('.export-pdf-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const studentId = btn.dataset.studentId;
+                await this.exportStudentIncidentsPDF(studentId);
+            });
+        });
+    },
+
+    /**
+     * Export student's incident history as PDF (uses browser print)
+     */
+    async exportStudentIncidentsPDF(studentId) {
+        const student = await DB.getStudent(studentId);
+        const incidents = await DB.getIncidentsByStudent(studentId);
+
+        if (!student || incidents.length === 0) {
+            this.showError('No incidents to export');
+            return;
+        }
+
+        // Create printable content
+        const printWindow = window.open('', '_blank');
+        const content = this.generateIncidentReportHTML(student, incidents);
+
+        printWindow.document.write(content);
+        printWindow.document.close();
+
+        // Wait for content to load then print
+        printWindow.onload = () => {
+            printWindow.print();
+        };
+    },
+
+    /**
+     * Generate HTML for incident report PDF
+     */
+    generateIncidentReportHTML(student, incidents) {
+        const categories = {};
+        const severityCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+        incidents.forEach(inc => {
+            categories[inc.category] = (categories[inc.category] || 0) + 1;
+            severityCounts[inc.severity] = (severityCounts[inc.severity] || 0) + 1;
+        });
+
+        return `
+    < !DOCTYPE html >
+        <html>
+            <head>
+                <title>Incident Report - ${Utils.escapeHTML(student.name)}</title>
+                <style>
+                    body {font - family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+                    h1 {color: #333; border-bottom: 2px solid #8b5cf6; padding-bottom: 10px; }
+                    h2 {color: #555; margin-top: 30px; }
+                    .header-info {display: flex; justify-content: space-between; margin-bottom: 20px; background: #f5f5f5; padding: 15px; border-radius: 8px; }
+                    .header-info p {margin: 5px 0; }
+                    table {width: 100%; border-collapse: collapse; margin-top: 15px; }
+                    th, td {border: 1px solid #ddd; padding: 10px; text-align: left; }
+                    th {background: #8b5cf6; color: white; }
+                    tr:nth-child(even) {background: #f9f9f9; }
+                    .severity-1 {color: #22c55e; }
+                    .severity-2 {color: #eab308; }
+                    .severity-3 {color: #f97316; }
+                    .severity-4 {color: #ef4444; }
+                    .severity-5 {color: #7f1d1d; font-weight: bold; }
+                    .summary-grid {display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 20px 0; }
+                    .summary-card {background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center; }
+                    .summary-card h3 {margin: 0; font-size: 24px; color: #8b5cf6; }
+                    .summary-card p {margin: 5px 0 0; color: #666; }
+                    .footer {margin - top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #888; text-align: center; }
+                    @media print {body {padding: 0; } }
+                </style>
+            </head>
+            <body>
+                <h1>📊 Incident Report</h1>
+
+                <div class="header-info">
+                    <div>
+                        <p><strong>Student:</strong> ${Utils.escapeHTML(student.name)}</p>
+                        <p><strong>Grade:</strong> ${student.grade}</p>
+                    </div>
+                    <div>
+                        <p><strong>Report Generated:</strong> ${new Date().toLocaleDateString()}</p>
+                        <p><strong>Total Incidents:</strong> ${incidents.length}</p>
+                    </div>
+                </div>
+
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <h3>${severityCounts[4] + severityCounts[5]}</h3>
+                        <p>Critical/Terminating</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>${incidents.filter(i => !i.resolved).length}</h3>
+                        <p>Unresolved</p>
+                    </div>
+                    <div class="summary-card">
+                        <h3>${Object.keys(categories).length}</h3>
+                        <p>Categories</p>
+                    </div>
+                </div>
+
+                <h2>All Incidents</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Severity</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${incidents.map(inc => {
+            const cat = Methodology.getCategory(inc.category);
+            return `
+                                <tr>
+                                    <td>${Utils.formatDateTime(inc.timestamp)}</td>
+                                    <td>${cat?.label || inc.category}</td>
+                                    <td class="severity-${inc.severity}">${inc.severity}</td>
+                                    <td>${Utils.escapeHTML(inc.description || '')}</td>
+                                    <td>${inc.resolved ? '✅ Resolved' : '⏳ Open'}</td>
+                                </tr>
+                            `;
+        }).join('')}
+                    </tbody>
+                </table>
+
+                <div class="footer">
+                    <p>Generated by Session Order OS | Confidential Student Record</p>
+                </div>
+            </body>
+        </html>
+`;
     },
 
     renderIncidentsList(incidents) {
@@ -1418,7 +1975,7 @@ const App = {
         }
 
         return `
-            <table class="incidents-table">
+    < table class="incidents-table" >
                 <thead>
                     <tr>
                         <th>Date/Time</th>
@@ -1443,8 +2000,8 @@ const App = {
                         `;
         }).join('')}
                 </tbody>
-            </table>
-        `;
+            </table >
+    `;
     },
 
     setupIncidentRowHandlers() {
@@ -1460,7 +2017,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.innerHTML = `
-            <div class="modal modal-large glass">
+    < div class="modal modal-large glass" >
                 <div class="modal-header">
                     <h3>${detail.categoryIcon} ${detail.categoryLabel}</h3>
                     <button class="modal-close">&times;</button>
@@ -1520,8 +2077,8 @@ const App = {
                     ` : ''}
                     <button class="btn btn-secondary modal-cancel">Close</button>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(modal);
 
@@ -1550,7 +2107,7 @@ const App = {
         const patterns = Incidents.analyzePatterns(allIncidents);
 
         main.innerHTML = `
-            <div class="page-reports">
+    < div class="page-reports" >
                 <div class="reports-header glass">
                     <h2>Reports & Insights</h2>
                 </div>
@@ -1618,8 +2175,8 @@ const App = {
                         </div>
                     </div>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         // Report handlers
         const select = document.getElementById('sessionReportSelect');
@@ -1670,60 +2227,60 @@ const App = {
         const settings = await DB.getSettings();
 
         main.innerHTML = `
-            <div class="page-settings">
-                <div class="settings-section glass">
-                    <h2>⚙️ Settings</h2>
+    < div class="page-settings" >
+        <div class="settings-section glass">
+            <h2>⚙️ Settings</h2>
 
-                    <div class="setting-group">
-                        <h3>AI Configuration</h3>
-                        <div class="form-group">
-                            <label>
-                                <input type="checkbox" id="aiEnabled" ${settings.aiEnabled ? 'checked' : ''}>
-                                Enable AI-powered recommendations
-                            </label>
-                            <p class="hint">When disabled, the app uses deterministic methodology logic only.</p>
-                        </div>
-                        <div class="form-group">
-                            <label for="workerEndpoint">Worker Endpoint URL</label>
-                            <input type="url" id="workerEndpoint" class="form-control" 
-                                   value="${settings.workerEndpoint || ''}" 
-                                   placeholder="https://your-worker.workers.dev">
-                            <button id="testConnectionBtn" class="btn btn-small">Test Connection</button>
-                            <span id="connectionStatus"></span>
-                        </div>
-                    </div>
-
-                    <div class="setting-group">
-                        <h3>Data Management</h3>
-                        <div class="data-actions">
-                            <button id="exportDataBtn" class="btn btn-primary">📤 Export All Data</button>
-                            <label class="btn btn-secondary">
-                                📥 Import Data
-                                <input type="file" id="importDataInput" accept=".json" hidden>
-                            </label>
-                        </div>
-                        <div class="danger-zone">
-                            <h4>⚠️ Danger Zone</h4>
-                            <button id="wipeDataBtn" class="btn btn-danger">🗑️ Wipe All Data</button>
-                            <p class="hint">This cannot be undone. Export your data first!</p>
-                        </div>
-                    </div>
-
-                    <div class="setting-group">
-                        <h3>Privacy Information</h3>
-                        <div class="privacy-info">
-                            <p>✅ All data is stored locally in your browser (IndexedDB)</p>
-                            <p>✅ No data is sent to any server except when AI is enabled</p>
-                            <p>✅ AI requests go through your Cloudflare Worker only</p>
-                            <p>✅ No tracking, no analytics, no cookies</p>
-                            <p>✅ Works offline (AI features degrade gracefully)</p>
-                        </div>
-                    </div>
-
-                    <button id="saveSettingsBtn" class="btn btn-primary btn-large">Save Settings</button>
+            <div class="setting-group">
+                <h3>AI Configuration</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="aiEnabled" ${settings.aiEnabled ? 'checked' : ''}>
+                            Enable AI-powered recommendations
+                    </label>
+                    <p class="hint">When disabled, the app uses deterministic methodology logic only.</p>
+                </div>
+                <div class="form-group">
+                    <label for="workerEndpoint">Worker Endpoint URL</label>
+                    <input type="url" id="workerEndpoint" class="form-control"
+                        value="${settings.workerEndpoint || ''}"
+                        placeholder="https://your-worker.workers.dev">
+                        <button id="testConnectionBtn" class="btn btn-small">Test Connection</button>
+                        <span id="connectionStatus"></span>
                 </div>
             </div>
-        `;
+
+            <div class="setting-group">
+                <h3>Data Management</h3>
+                <div class="data-actions">
+                    <button id="exportDataBtn" class="btn btn-primary">📤 Export All Data</button>
+                    <label class="btn btn-secondary">
+                        📥 Import Data
+                        <input type="file" id="importDataInput" accept=".json" hidden>
+                    </label>
+                </div>
+                <div class="danger-zone">
+                    <h4>⚠️ Danger Zone</h4>
+                    <button id="wipeDataBtn" class="btn btn-danger">🗑️ Wipe All Data</button>
+                    <p class="hint">This cannot be undone. Export your data first!</p>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Privacy Information</h3>
+                <div class="privacy-info">
+                    <p>✅ All data is stored locally in your browser (IndexedDB)</p>
+                    <p>✅ No data is sent to any server except when AI is enabled</p>
+                    <p>✅ AI requests go through your Cloudflare Worker only</p>
+                    <p>✅ No tracking, no analytics, no cookies</p>
+                    <p>✅ Works offline (AI features degrade gracefully)</p>
+                </div>
+            </div>
+
+            <button id="saveSettingsBtn" class="btn btn-primary btn-large">Save Settings</button>
+        </div>
+            </div >
+    `;
 
         // Save settings
         document.getElementById('saveSettingsBtn')?.addEventListener('click', async () => {
@@ -1805,7 +2362,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'ai-modal';
         modal.innerHTML = `
-            <div class="ai-modal-content glass">
+    < div class="ai-modal-content glass" >
                 <div class="ai-modal-header">
                     <h3>✨ ${title}</h3>
                     <button class="close-btn">&times;</button>
@@ -1814,8 +2371,8 @@ const App = {
                     ${content}
                 </div>
                 ${footer ? `<div class="ai-modal-footer">${footer}</div>` : ''}
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(modal);
 
@@ -1840,11 +2397,11 @@ const App = {
      */
     showAILoading(title) {
         return this.showAIModal(title, `
-            <div class="ai-loading">
+    < div class="ai-loading" >
                 <div class="spinner"></div>
                 <p>AI is thinking...</p>
-            </div>
-        `);
+            </div >
+    `);
     },
 
     /**
@@ -1873,7 +2430,7 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-                <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI is currently unavailable. Try these steps:</p>
                     <ul style="text-align:left">
@@ -1882,16 +2439,16 @@ const App = {
                         <li>Ask: "What do you need right now?"</li>
                         <li>Consider a short break</li>
                     </ul>
-                </div>
-            `;
+                </div >
+    `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-            <div class="ai-response-card" style="margin-top: 1.5rem;">
+    < div class="ai-response-card" style = "margin-top: 1.5rem;" >
                 <h4>🚨 Immediate Action</h4>
                 <p><strong>${result.immediateAction}</strong></p>
-            </div>
+            </div >
             
             <div class="ai-script-item neutral">
                 <div class="tone-label">Say This</div>
@@ -1922,16 +2479,17 @@ const App = {
                     <ul>${result.dontDo.map(d => `<li>${d}</li>`).join('')}</ul>
                 </div>
             </div>
-            ` : ''}
-            
-            <div class="insight-item">
-                <div class="icon">🔄</div>
-                <div class="content">
-                    <h4>Recovery Plan</h4>
-                    <p>${result.recoveryPlan}</p>
-                </div>
-            </div>
-        `;
+            ` : ''
+            }
+
+<div class="insight-item">
+    <div class="icon">🔄</div>
+    <div class="content">
+        <h4>Recovery Plan</h4>
+        <p>${result.recoveryPlan}</p>
+    </div>
+</div>
+`;
     },
 
     /**
@@ -1946,32 +2504,34 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-                <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI prep briefing unavailable. No prior incidents to analyze.</p>
-                </div>
-            `;
+                </div >
+    `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-            <div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}">
-                Risk Level: ${result.riskLevel || 'Low'}
-            </div>
-            
-            ${result.keyPatterns?.length ? `
+    < div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}" >
+        Risk Level: ${result.riskLevel || 'Low'}
+            </div >
+
+    ${result.keyPatterns?.length ? `
             <div class="ai-response-card" style="margin-top: 1.5rem;">
                 <h4>📊 Key Patterns</h4>
                 <ul>${result.keyPatterns.map(p => `<li>${p}</li>`).join('')}</ul>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.proactiveStrategies?.length ? `
             <div class="ai-response-card">
                 <h4>🎯 Proactive Strategies</h4>
                 <ul>${result.proactiveStrategies.map(s => `<li>${s}</li>`).join('')}</ul>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.watchTimes?.length ? `
             <div class="insight-item">
@@ -1981,7 +2541,8 @@ const App = {
                     <p>${result.watchTimes.join(', ')}</p>
                 </div>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.positiveNotes?.length ? `
             <div class="insight-item">
@@ -1991,16 +2552,17 @@ const App = {
                     <ul>${result.positiveNotes.map(n => `<li>${n}</li>`).join('')}</ul>
                 </div>
             </div>
-            ` : ''}
-            
-            <div class="insight-item">
-                <div class="icon">💡</div>
-                <div class="content">
-                    <h4>Suggested Approach</h4>
-                    <p>${result.suggestedApproach || 'Start positive and establish rapport.'}</p>
-                </div>
-            </div>
-        `;
+            ` : ''
+            }
+
+<div class="insight-item">
+    <div class="icon">💡</div>
+    <div class="content">
+        <h4>Suggested Approach</h4>
+        <p>${result.suggestedApproach || 'Start positive and establish rapport.'}</p>
+    </div>
+</div>
+`;
     },
 
     /**
@@ -2014,23 +2576,23 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-                <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI goal suggestions unavailable.</p>
-                </div>
-            `;
+                </div >
+    `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-            <div class="ai-goals-list">
-                <div class="ai-goal-item primary" onclick="this.classList.toggle('selected')">
-                    <div class="goal-check">✓</div>
-                    <div class="goal-text">
-                        <h4>🎯 ${result.primaryGoal}</h4>
-                        <p>Primary goal for this session</p>
-                    </div>
-                </div>
+    < div class="ai-goals-list" >
+        <div class="ai-goal-item primary" onclick="this.classList.toggle('selected')">
+            <div class="goal-check">✓</div>
+            <div class="goal-text">
+                <h4>🎯 ${result.primaryGoal}</h4>
+                <p>Primary goal for this session</p>
+            </div>
+        </div>
                 ${result.secondaryGoals?.map(g => `
                     <div class="ai-goal-item" onclick="this.classList.toggle('selected')">
                         <div class="goal-check"></div>
@@ -2038,7 +2600,8 @@ const App = {
                             <h4>${g}</h4>
                         </div>
                     </div>
-                `).join('') || ''}
+                `).join('') || ''
+            }
                 ${result.microGoals?.map(g => `
                     <div class="ai-goal-item" onclick="this.classList.toggle('selected')">
                         <div class="goal-check"></div>
@@ -2047,10 +2610,11 @@ const App = {
                             <p>Quick win goal</p>
                         </div>
                     </div>
-                `).join('') || ''}
-            </div>
-            
-            ${result.rationale ? `
+                `).join('') || ''
+            }
+            </div >
+
+    ${result.rationale ? `
             <div class="insight-item" style="margin-top: 1rem;">
                 <div class="icon">💭</div>
                 <div class="content">
@@ -2058,13 +2622,14 @@ const App = {
                     <p>${result.rationale}</p>
                 </div>
             </div>
-            ` : ''}
-        `;
+            ` : ''
+            }
+`;
 
         modal.querySelector('.ai-modal-footer')?.remove();
         const footer = document.createElement('div');
         footer.className = 'ai-modal-footer';
-        footer.innerHTML = `<button class="btn btn-primary" id="applyGoalsBtn">Apply Selected Goals</button>`;
+        footer.innerHTML = `< button class="btn btn-primary" id = "applyGoalsBtn" > Apply Selected Goals</button > `;
         modal.querySelector('.ai-modal-content').appendChild(footer);
 
         footer.querySelector('#applyGoalsBtn').addEventListener('click', () => {
@@ -2073,7 +2638,7 @@ const App = {
 
             // Update goal inputs
             goals.slice(0, 3).forEach((goal, i) => {
-                const input = document.getElementById(`goal${i + 1}`);
+                const input = document.getElementById(`goal${i + 1} `);
                 if (input) input.value = goal;
             });
 
@@ -2100,23 +2665,23 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-                <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI summary generation unavailable.</p>
-                </div>
-            `;
+                </div >
+    `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-            <div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}">
-                Session Rating: ${result.overallRating?.charAt(0).toUpperCase() + result.overallRating?.slice(1)}
-            </div>
-            
-            <div class="ai-response-card" style="margin-top: 1.5rem;">
-                <h4>📋 Summary</h4>
-                <p>${result.summary}</p>
-            </div>
+    < div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}" >
+        Session Rating: ${result.overallRating?.charAt(0).toUpperCase() + result.overallRating?.slice(1)}
+            </div >
+
+    <div class="ai-response-card" style="margin-top: 1.5rem;">
+        <h4>📋 Summary</h4>
+        <p>${result.summary}</p>
+    </div>
             
             ${result.positiveHighlights?.length ? `
             <div class="insight-item">
@@ -2126,7 +2691,8 @@ const App = {
                     <ul>${result.positiveHighlights.map(h => `<li>${h}</li>`).join('')}</ul>
                 </div>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.recommendationsForNextSession?.length ? `
             <div class="insight-item">
@@ -2136,7 +2702,8 @@ const App = {
                     <ul>${result.recommendationsForNextSession.map(r => `<li>${r}</li>`).join('')}</ul>
                 </div>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.parentFriendlyVersion ? `
             <div class="ai-response-card">
@@ -2144,8 +2711,9 @@ const App = {
                 <p style="font-style: italic;">${result.parentFriendlyVersion}</p>
                 <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.parentFriendlyVersion.replace(/'/g, "\\'")}'); this.textContent='Copied!'">📋 Copy</button>
             </div>
-            ` : ''}
-        `;
+            ` : ''
+            }
+`;
     },
 
     /**
@@ -2159,20 +2727,20 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-                <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI pattern analysis unavailable or insufficient data.</p>
-                </div>
-            `;
+                </div >
+    `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-            <div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}">
-                Trend: ${result.overallTrend?.charAt(0).toUpperCase() + result.overallTrend?.slice(1)}
-            </div>
-            
-            <p style="margin: 1rem 0;">${result.trendSummary}</p>
+    < div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}" >
+        Trend: ${result.overallTrend?.charAt(0).toUpperCase() + result.overallTrend?.slice(1)}
+            </div >
+
+    <p style="margin: 1rem 0;">${result.trendSummary}</p>
             
             ${result.topCategories?.length ? `
             <div class="ai-response-card">
@@ -2186,7 +2754,8 @@ const App = {
                     `).join('')}
                 </div>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.improvingAreas?.length ? `
             <div class="insight-item">
@@ -2196,7 +2765,8 @@ const App = {
                     <ul>${result.improvingAreas.map(a => `<li>${a}</li>`).join('')}</ul>
                 </div>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.concerningPatterns?.length ? `
             <div class="insight-item">
@@ -2206,15 +2776,17 @@ const App = {
                     <ul>${result.concerningPatterns.map(p => `<li>${p}</li>`).join('')}</ul>
                 </div>
             </div>
-            ` : ''}
+            ` : ''
+            }
             
             ${result.methodologyAdjustments?.length ? `
             <div class="ai-response-card">
                 <h4>💡 Suggested Adjustments</h4>
                 <ul>${result.methodologyAdjustments.map(a => `<li>${a}</li>`).join('')}</ul>
             </div>
-            ` : ''}
-        `;
+            ` : ''
+            }
+`;
     },
 
     /**
@@ -2260,7 +2832,7 @@ const App = {
      */
     showToast(message, type = 'info') {
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
+        toast.className = `toast toast - ${type} `;
         toast.textContent = message;
         document.body.appendChild(toast);
 

@@ -3007,3 +3007,500 @@ tr.incident-row:hover {
         font-size: 2rem;
     }
 }
+
+/* ========================
+   PHASE 10: MILESTONE PROGRESS BAR & L4/L5 OVERLAYS
+   ======================== */
+
+/* Milestone Progress Bar */
+.consequence-progress-milestones {
+    margin-bottom: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.consequence-progress-milestones .progress-label {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+    color: var(--text-secondary);
+}
+
+.milestone-bar {
+    position: relative;
+    height: 20px;
+    background: linear-gradient(90deg,
+            var(--success) 0% 25%,
+            var(--warning) 25% 50%,
+            #ff8c00 50% 75%,
+            var(--danger) 75% 100%);
+    border-radius: var(--radius-full);
+    overflow: visible;
+    margin-bottom: var(--space-6);
+}
+
+.milestone-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-full);
+    mix-blend-mode: overlay;
+    transition: width 0.5s ease-out;
+    z-index: 1;
+}
+
+.milestone-markers {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+}
+
+.milestone {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+}
+
+.milestone-tick {
+    width: 4px;
+    height: 30px;
+    background: var(--bg-primary);
+    border-radius: 2px;
+    margin-bottom: var(--space-1);
+    transition: all 0.3s ease;
+}
+
+.milestone-tick.reached {
+    background: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.milestone-label {
+    position: absolute;
+    top: 35px;
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.progress-status {
+    text-align: center;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.progress-status.warning {
+    color: var(--warning);
+}
+
+.progress-status.critical {
+    color: var(--danger);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Session Stop Overlay (Level 4) */
+.session-stop-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95));
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: emergencyFadeIn 0.3s ease-out;
+}
+
+.stop-content {
+    width: 90%;
+    max-width: 500px;
+    padding: var(--space-6);
+    text-align: center;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.stop-header {
+    margin-bottom: var(--space-5);
+}
+
+.stop-header .stop-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-3);
+}
+
+.stop-header h1 {
+    font-size: var(--font-size-2xl);
+    font-weight: 900;
+    color: white;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.stop-details {
+    margin-bottom: var(--space-5);
+}
+
+.severity-badge {
+    display: inline-block;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    font-weight: 700;
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--space-3);
+}
+
+.severity-badge.critical {
+    background: rgba(255, 255, 255, 0.9);
+    color: #dc2626;
+}
+
+.severity-badge.terminating {
+    background: #7f1d1d;
+    color: white;
+    border: 2px solid white;
+}
+
+.stop-reason {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+}
+
+.stop-time {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: var(--font-size-sm);
+    margin-top: var(--space-2);
+}
+
+.stop-script,
+.termination-script {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+    text-align: left;
+}
+
+.stop-script .script-label,
+.termination-script .script-label {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.stop-script .script-text,
+.termination-script .script-text {
+    color: white;
+    font-size: var(--font-size-lg);
+}
+
+.email-draft-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.email-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-sm);
+}
+
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.email-preview-card {
+    background: white;
+    color: #333;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    text-align: left;
+}
+
+.email-preview-card.termination {
+    border-left: 4px solid #7f1d1d;
+}
+
+.email-subject {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid #eee;
+}
+
+.email-preview-card .email-body {
+    font-size: var(--font-size-sm);
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: var(--space-3);
+}
+
+.email-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.stop-actions,
+.termination-actions {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.stop-actions .btn,
+.termination-actions .btn {
+    min-width: 160px;
+}
+
+/* Termination Overlay (Level 5) */
+.termination-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(127, 29, 29, 0.95));
+    backdrop-filter: blur(20px);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: emergencyFadeIn 0.3s ease-out;
+}
+
+.termination-content {
+    width: 90%;
+    max-width: 500px;
+    padding: var(--space-6);
+    text-align: center;
+    background: rgba(127, 29, 29, 0.3);
+    border: 2px solid rgba(127, 29, 29, 0.5);
+}
+
+.termination-header .termination-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-3);
+}
+
+.termination-header h1 {
+    font-size: var(--font-size-xl);
+    font-weight: 900;
+    color: #fca5a5;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.termination-details {
+    margin-bottom: var(--space-5);
+}
+
+.termination-reason {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+}
+
+.termination-time {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--font-size-sm);
+    margin-top: var(--space-2);
+}
+
+/* Email Modal */
+.email-modal {
+    max-width: 600px;
+}
+
+.email-modal .modal-body {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.full-email-content {
+    line-height: 1.8;
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+}
+
+/* Button variations */
+.btn-small {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--font-size-xs);
+}
+
+/* Responsive L4/L5 */
+@media (max-width: 768px) {
+
+    .stop-content,
+    .termination-content {
+        padding: var(--space-4);
+    }
+
+    .stop-header h1,
+    .termination-header h1 {
+        font-size: var(--font-size-lg);
+    }
+
+    .stop-actions,
+    .termination-actions {
+        flex-direction: column;
+    }
+
+    .stop-actions .btn,
+    .termination-actions .btn {
+        width: 100%;
+    }
+
+    .milestone-label {
+        font-size: 9px;
+    }
+}
+
+/* ========================
+   STUDENT-SEPARATED INCIDENTS
+   ======================== */
+
+.incidents-by-student {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.student-incidents-section {
+    padding: var(--space-4);
+    border-left: 4px solid var(--accent-primary);
+}
+
+.student-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.student-info h3 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+}
+
+.student-grade {
+    background: var(--bg-tertiary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.incident-count {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.critical-badge {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.unresolved-badge {
+    background: rgba(234, 179, 8, 0.2);
+    color: var(--warning);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+}
+
+.student-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.student-incidents-table {
+    overflow-x: auto;
+}
+
+/* Filter with student selector */
+.incidents-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+.incidents-filters .form-control {
+    min-width: 150px;
+}
+
+@media (max-width: 768px) {
+    .student-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .student-actions {
+        width: 100%;
+    }
+
+    .student-actions .btn {
+        flex: 1;
+    }
+}

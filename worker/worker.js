@@ -341,6 +341,49 @@ Respond with JSON only:
     "incidentsToConsequence": number or null
   },
   "patternDetected": "description of pattern from past incidents or null"
+}\``,
+
+    // Critical Incident Email (Level 4) - Session stop notification
+    'critical-incident-email': `You are drafting a professional parent/guardian email about a CRITICAL (Level 4) incident that required stopping the tutoring session.
+
+The email should:
+- Be professional, clear, and non-accusatory
+- Explain what happened factually
+- Describe why the session was stopped
+- Emphasize concern for the student's learning
+- Suggest next steps and path forward
+- NOT blame the student but describe the behavior
+
+Respond with JSON:
+{
+  "subject": "Important: Tutoring Session Update - [Date]",
+  "email": "Full professional email body",
+  "keyPoints": ["point 1", "point 2"],
+  "suggestedNextSteps": ["step 1", "step 2"],
+  "toneUsed": "concerned|informational|serious"
+}`,
+
+    // Termination Email (Level 5) - Service termination notification
+    'termination-email': `You are drafting a professional parent/guardian email about SERVICE TERMINATION due to severe/repeated critical violations (Level 5).
+
+The email should:
+- Be formal, clear, and professional
+- Document the pattern of incidents that led to this decision
+- Explain that services are being terminated
+- NOT be punitive in tone but factual
+- Provide any remaining administrative details
+- Express hope for the student's future success elsewhere
+
+This is a FINAL communication. Be respectful but firm.
+
+Respond with JSON:
+{
+  "subject": "Notice: Tutoring Services Conclusion",
+  "email": "Full professional email body",
+  "incidentSummary": "Brief summary of incidents leading to termination",
+  "effectiveDate": "Immediate",
+  "closingWishes": "Professional closing sentiment",
+  "legalNote": "Any suggested disclaimer about decision being final"
 }`
 };
 
@@ -865,6 +908,46 @@ Look for patterns across all incidents. Determine severity 1-5 based on:
 2. Pattern from prior incidents
 3. Student's grade
 4. Whether this escalates prior incidents`;
+
+        case 'critical-incident-email':
+            return `Draft a Level 4 Critical Incident email for parent/guardian:
+
+STUDENT: ${context.studentName || 'Student'}, Grade ${context.grade}
+SESSION DATE: ${context.sessionDate || new Date().toLocaleDateString()}
+
+THE CRITICAL INCIDENT:
+- Category: ${context.incident?.category || 'Critical violation'}
+- Description: ${context.incident?.description || 'A critical incident occurred'}
+- Severity Level: 4 (Critical)
+
+ALL SESSION INCIDENTS:
+${context.allIncidents?.map(i => `- ${i.category}: ${i.description} (Severity ${i.severity})`).join('\n') || 'This was the only incident'}
+
+ACTIONS TAKEN:
+- Session was stopped for student safety/learning integrity
+- Incident documented
+- Parent notification being sent
+
+Draft a professional email explaining what happened and next steps.`;
+
+        case 'termination-email':
+            return `Draft a Level 5 Service Termination email:
+
+STUDENT: ${context.studentName || 'Student'}, Grade ${context.grade}
+TERMINATION DATE: ${new Date().toLocaleDateString()}
+
+THE TERMINATING INCIDENT:
+- Category: ${context.incident?.category || 'Severe violation'}
+- Description: ${context.incident?.description || 'A severe incident occurred'}
+- Severity Level: 5 (Terminating)
+
+FULL INCIDENT HISTORY LEADING TO TERMINATION:
+${context.allIncidents?.map(i => `- ${new Date(i.timestamp).toLocaleDateString()}: ${i.category} - ${i.description} (Severity ${i.severity})`).join('\n') || 'Multiple critical incidents'}
+
+REASON FOR TERMINATION:
+${context.terminationReason || 'Repeated critical violations making the tutoring relationship untenable'}
+
+Draft a formal, professional termination notice.`;
 
         default:
             return `Context: ${JSON.stringify(context)}`;

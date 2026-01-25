@@ -897,6 +897,114 @@ const AI = {
         // Look up base severity
         const categoryMatrix = severityMatrix[category] || severityMatrix['OTHER'];
         return categoryMatrix[bandIndex] || 1;
+    },
+
+    /**
+     * 12. Draft Critical Incident Email (Level 4)
+     * Draft parent email after session stop due to critical incident
+     * @param {Object} incident - The critical incident
+     * @param {Object} student - Student data
+     * @param {Array} allIncidents - All incidents from session
+     * @returns {Promise<Object>} Drafted email
+     */
+    async draftCriticalIncidentEmail(incident, student, allIncidents = []) {
+        const context = {
+            studentName: student?.name || 'Your child',
+            grade: student?.grade || 6,
+            sessionDate: new Date().toLocaleDateString(),
+            incident: {
+                category: incident.category,
+                description: incident.description || 'A critical incident occurred'
+            },
+            allIncidents: allIncidents.map(i => ({
+                category: i.category,
+                description: i.description,
+                severity: i.severity
+            }))
+        };
+
+        const result = await this.callAIFeature('critical-incident-email', context);
+
+        // Fallback if AI unavailable
+        if (!result) {
+            return {
+                subject: `Important: Tutoring Session Update - ${context.sessionDate}`,
+                email: `Dear Parent/Guardian,
+
+I'm writing to inform you about today's tutoring session with ${context.studentName}.
+
+During our session, a critical incident occurred that required us to stop the lesson early. Specifically, there was an issue involving ${context.incident.category.toLowerCase().replace(/_/g, ' ')}.
+
+I want to assure you that I handled the situation calmly and professionally. However, for the student's benefit and to maintain a productive learning environment, I felt it was necessary to conclude today's session early.
+
+I believe it would be helpful to discuss this briefly before our next session. Please feel free to reach out at your convenience.
+
+Thank you for your understanding.
+
+Best regards,
+Your Tutor`,
+                keyPoints: ['Session stopped early', 'Student safety/learning prioritized'],
+                suggestedNextSteps: ['Discussion before next session', 'Set clear expectations'],
+                toneUsed: 'concerned',
+                source: 'deterministic'
+            };
+        }
+
+        return result;
+    },
+
+    /**
+     * 13. Draft Termination Email (Level 5)
+     * Draft service termination email due to severe/repeated violations
+     * @param {Object} incident - The terminating incident
+     * @param {Object} student - Student data  
+     * @param {Array} allIncidents - Full incident history
+     * @returns {Promise<Object>} Termination email
+     */
+    async draftTerminationEmail(incident, student, allIncidents = []) {
+        const context = {
+            studentName: student?.name || 'the student',
+            grade: student?.grade || 6,
+            incident: {
+                category: incident.category,
+                description: incident.description || 'A severe incident occurred'
+            },
+            allIncidents: allIncidents.map(i => ({
+                category: i.category,
+                description: i.description,
+                severity: i.severity,
+                timestamp: i.timestamp || i.createdAt
+            })),
+            terminationReason: 'Repeated critical violations making the tutoring relationship untenable'
+        };
+
+        const result = await this.callAIFeature('termination-email', context);
+
+        // Fallback if AI unavailable
+        if (!result) {
+            return {
+                subject: 'Notice: Tutoring Services Conclusion',
+                email: `Dear Parent/Guardian,
+
+After careful consideration, I regret to inform you that I am unable to continue providing tutoring services for ${context.studentName}.
+
+This decision follows a pattern of incidents that have made it impossible to maintain a productive and safe learning environment. Today's session included a Level 5 (Terminating) incident that, combined with prior issues, necessitates this step.
+
+I understand this may be disappointing news. I have documented the incidents for your records and am happy to provide this documentation if it would be helpful for future educational support.
+
+I sincerely hope that ${context.studentName} finds success with a different tutor or learning arrangement that better fits their needs.
+
+Best wishes,
+Your Tutor`,
+                incidentSummary: 'Multiple critical violations leading to termination',
+                effectiveDate: 'Immediate',
+                closingWishes: 'Wishing the student future success',
+                legalNote: 'This decision is final. Documentation available upon request.',
+                source: 'deterministic'
+            };
+        }
+
+        return result;
     }
 };
 
