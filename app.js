@@ -201,7 +201,7 @@ const App = {
                             </select>
                         </div>
 
-                        ${recentStudents.length> 0 ? `
+                        ${recentStudents.length > 0 ? `
                         <div class="recent-students">
                             <label>Recent Students</label>
                             <div class="recent-student-chips">
@@ -319,7 +319,7 @@ const App = {
                         <div class="agenda-panel glass">
                             <h3>Session Goals</h3>
                             <div class="goals-list">
-                                ${summary.goals.length> 0 ? summary.goals.map((goal, i) => {
+                                ${summary.goals.length > 0 ? summary.goals.map((goal, i) => {
                 const goalText = typeof goal === 'string' ? goal : goal.text;
                 const completed = typeof goal === 'object' && goal.completed;
                 return `
@@ -765,10 +765,10 @@ const App = {
                 modal.remove();
 
                 // Handle based on severity level
-                if (analysis.severity>= 5) {
+                if (analysis.severity >= 5) {
                     // Level 5: Terminating - show termination overlay and draft email
                     this.showTerminationOverlay(analysis, result.incident);
-                } else if (analysis.severity>= 4) {
+                } else if (analysis.severity >= 4) {
                     // Level 4: Critical - auto session stop, draft email, but timer continues
                     this.showSessionStopOverlay(analysis, result.incident);
                 } else {
@@ -856,32 +856,32 @@ const App = {
                 <!-- Milestone Progress Bar -->
                 <div class="consequence-progress-milestones">
                     <div class="progress-label">⚡ Consequence Progress</div>
-                    <div class="milestone-bar">
+                    <div class="milestone-bar" style="--progress: ${progressPercent}%">
                         <div class="milestone-fill" style="width: ${progressPercent}%"></div>
                         <div class="milestone-markers">
                             <div class="milestone" style="left: 25%">
-                                <div class="milestone-tick ${progressPercent>= 25 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent >= 25 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Verbal</div>
                             </div>
                             <div class="milestone" style="left: 50%">
-                                <div class="milestone-tick ${progressPercent>= 50 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent >= 50 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Consequence</div>
                             </div>
                             <div class="milestone" style="left: 75%">
-                                <div class="milestone-tick ${progressPercent>= 75 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent >= 75 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Parent</div>
                             </div>
                             <div class="milestone" style="left: 100%">
-                                <div class="milestone-tick ${progressPercent>= 100 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent >= 100 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Stop</div>
                             </div>
                         </div>
                     </div>
-                    <div class="progress-status ${progressPercent>= 100 ? 'critical' : progressPercent>= 75 ? 'warning' : ''}">
-                        ${progressPercent>= 100 ? '🛑 Session Stop Reached' :
-                progressPercent>= 75 ? '⚠️ Next: Session Stop' :
-                    progressPercent>= 50 ? '📞 Next: Parent Contact' :
-                        progressPercent>= 25 ? '⚡ Next: Consequence' :
+                    <div class="progress-status ${progressPercent >= 100 ? 'critical' : progressPercent >= 75 ? 'warning' : ''}">
+                        ${progressPercent >= 100 ? '🛑 Session Stop Reached' :
+                progressPercent >= 75 ? '⚠️ Next: Session Stop' :
+                    progressPercent >= 50 ? '📞 Next: Parent Contact' :
+                        progressPercent >= 25 ? '⚡ Next: Consequence' :
                             '🔔 Next: Verbal Warning'}
                     </div>
                 </div>
@@ -1800,7 +1800,7 @@ const App = {
             const studentGrade = student?.grade || 'N/A';
 
             // Calculate stats
-            const criticalCount = studentIncidents.filter(i => i.severity>= 4).length;
+            const criticalCount = studentIncidents.filter(i => i.severity >= 4).length;
             const unresolvedCount = studentIncidents.filter(i => !i.resolved).length;
 
             return `
@@ -1810,8 +1810,8 @@ const App = {
                             <h3>${Utils.escapeHTML(studentName)}</h3>
                             <span class="student-grade">Grade ${studentGrade}</span>
                             <span class="incident-count">${studentIncidents.length} incident${studentIncidents.length !== 1 ? 's' : ''}</span>
-                            ${criticalCount> 0 ? `<span class="critical-badge">${criticalCount} critical</span>` : ''}
-                            ${unresolvedCount> 0 ? `<span class="unresolved-badge">${unresolvedCount} unresolved</span>` : ''}
+                            ${criticalCount > 0 ? `<span class="critical-badge">${criticalCount} critical</span>` : ''}
+                            ${unresolvedCount > 0 ? `<span class="unresolved-badge">${unresolvedCount} unresolved</span>` : ''}
                         </div>
                         <div class="student-actions">
                             <button class="btn btn-small btn-secondary export-pdf-btn" data-student-id="${studentId}">
@@ -2119,7 +2119,7 @@ const App = {
                             <div class="insights-list">
                                 ${patterns.insights.map(i => `<p class="insight">💡 ${i}</p>`).join('')}
                             </div>
-                            ${patterns.topCategories.length> 0 ? `
+                            ${patterns.topCategories.length > 0 ? `
                                 <h4>Top Categories</h4>
                                 <ul>
                                     ${patterns.topCategories.map(c => `<li>${c.label}: ${c.count} (${c.percentage}%)</li>`).join('')}
@@ -2169,7 +2169,7 @@ const App = {
                                 <span class="label">Resolved</span>
                             </div>
                             <div class="stat">
-                                <span class="value">${sessions.length> 0 ? (allIncidents.length / sessions.length).toFixed(1) : 0}</span>
+                                <span class="value">${sessions.length > 0 ? (allIncidents.length / sessions.length).toFixed(1) : 0}</span>
                                 <span class="label">Avg per Session</span>
                             </div>
                         </div>
