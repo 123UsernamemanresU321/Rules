@@ -1695,12 +1695,25 @@ const App = {
         const main = document.getElementById('mainContent');
         const incidents = await Incidents.getAllIncidents();
         const students = await DB.getAllStudents();
+        const sessions = await DB.getAllSessions();
         const categories = Methodology.getCategoryButtons();
+
+        // Create map of sessionId -> studentId for fallback
+        const sessionStudentMap = {};
+        sessions.forEach(s => sessionStudentMap[s.id] = s.studentId);
 
         // Group incidents by student
         const incidentsByStudent = {};
         incidents.forEach(inc => {
-            const studentId = inc.studentId || 'unknown';
+            let studentId = inc.studentId;
+
+            // Fallback: try to resolve studentId from session
+            if (!studentId && inc.sessionId) {
+                studentId = sessionStudentMap[inc.sessionId];
+            }
+
+            studentId = studentId || 'unknown';
+
             if (!incidentsByStudent[studentId]) {
                 incidentsByStudent[studentId] = [];
             }
@@ -1975,7 +1988,7 @@ const App = {
         }
 
         return `
-    < table class="incidents-table">
+    <table class="incidents-table">
                 <thead>
                     <tr>
                         <th>Date/Time</th>

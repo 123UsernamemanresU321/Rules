@@ -33,6 +33,7 @@ const Incidents = {
         // Create the incident
         const incident = await DB.createIncident({
             sessionId: session.id,
+            studentId: session.studentId,
             category,
             severity: parseInt(severity),
             description,

@@ -317,6 +317,7 @@ const DB = {
         const data = {
             id: incident.id || Utils.generateId(),
             sessionId: incident.sessionId,
+            studentId: incident.studentId,
             category: incident.category,
             severity: parseInt(incident.severity) || 1,
             description: Utils.sanitizeHTML(incident.description),
