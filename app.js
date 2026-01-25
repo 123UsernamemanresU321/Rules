@@ -201,7 +201,7 @@ const App = {
                             </select>
                         </div>
 
-                        ${recentStudents.length > 0 ? `
+                        ${recentStudents.length> 0 ? `
                         <div class="recent-students">
                             <label>Recent Students</label>
                             <div class="recent-student-chips">
@@ -319,7 +319,7 @@ const App = {
                         <div class="agenda-panel glass">
                             <h3>Session Goals</h3>
                             <div class="goals-list">
-                                ${summary.goals.length > 0 ? summary.goals.map((goal, i) => {
+                                ${summary.goals.length> 0 ? summary.goals.map((goal, i) => {
                 const goalText = typeof goal === 'string' ? goal : goal.text;
                 const completed = typeof goal === 'object' && goal.completed;
                 return `
@@ -765,10 +765,10 @@ const App = {
                 modal.remove();
 
                 // Handle based on severity level
-                if (analysis.severity >= 5) {
+                if (analysis.severity>= 5) {
                     // Level 5: Terminating - show termination overlay and draft email
                     this.showTerminationOverlay(analysis, result.incident);
-                } else if (analysis.severity >= 4) {
+                } else if (analysis.severity>= 4) {
                     // Level 4: Critical - auto session stop, draft email, but timer continues
                     this.showSessionStopOverlay(analysis, result.incident);
                 } else {
@@ -860,28 +860,28 @@ const App = {
                         <div class="milestone-fill" style="width: ${progressPercent}%"></div>
                         <div class="milestone-markers">
                             <div class="milestone" style="left: 25%">
-                                <div class="milestone-tick ${progressPercent >= 25 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent>= 25 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Verbal</div>
                             </div>
                             <div class="milestone" style="left: 50%">
-                                <div class="milestone-tick ${progressPercent >= 50 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent>= 50 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Consequence</div>
                             </div>
                             <div class="milestone" style="left: 75%">
-                                <div class="milestone-tick ${progressPercent >= 75 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent>= 75 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Parent</div>
                             </div>
                             <div class="milestone" style="left: 100%">
-                                <div class="milestone-tick ${progressPercent >= 100 ? 'reached' : ''}"></div>
+                                <div class="milestone-tick ${progressPercent>= 100 ? 'reached' : ''}"></div>
                                 <div class="milestone-label">Stop</div>
                             </div>
                         </div>
                     </div>
-                    <div class="progress-status ${progressPercent >= 100 ? 'critical' : progressPercent >= 75 ? 'warning' : ''}">
-                        ${progressPercent >= 100 ? '🛑 Session Stop Reached' :
-                progressPercent >= 75 ? '⚠️ Next: Session Stop' :
-                    progressPercent >= 50 ? '📞 Next: Parent Contact' :
-                        progressPercent >= 25 ? '⚡ Next: Consequence' :
+                    <div class="progress-status ${progressPercent>= 100 ? 'critical' : progressPercent>= 75 ? 'warning' : ''}">
+                        ${progressPercent>= 100 ? '🛑 Session Stop Reached' :
+                progressPercent>= 75 ? '⚠️ Next: Session Stop' :
+                    progressPercent>= 50 ? '📞 Next: Parent Contact' :
+                        progressPercent>= 25 ? '⚡ Next: Consequence' :
                             '🔔 Next: Verbal Warning'}
                     </div>
                 </div>
@@ -1030,7 +1030,7 @@ const App = {
                 <div class="stop-script">
                     <div class="script-label">📢 Say to student:</div>
                     <div class="script-text">${analysis.actionPlan?.scriptForStudent || 'Our lesson is stopping now. We will try again next time.'}</div>
-                </div >
+                </div>
                 
                 <div class="email-draft-section">
                     <div class="email-status">
@@ -1044,7 +1044,7 @@ const App = {
                     <button class="btn btn-secondary continue-session-btn">Continue Session (Timer Runs)</button>
                     <button class="btn btn-primary end-session-btn">End Session Now</button>
                 </div>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(overlay);
@@ -1089,7 +1089,7 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'termination-overlay level-5';
         overlay.innerHTML = `
-    < div class="termination-content glass" >
+    <div class="termination-content glass">
                 <div class="termination-header">
                     <div class="termination-icon">⛔</div>
                     <h1>LEVEL 5 - SERVICE TERMINATION</h1>
@@ -1117,7 +1117,7 @@ const App = {
                 <div class="termination-actions">
                     <button class="btn btn-primary end-session-btn">End Session & Confirm Termination</button>
                 </div>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(overlay);
@@ -1162,14 +1162,14 @@ const App = {
                 statusEl.classList.add('hidden');
                 previewEl.classList.remove('hidden');
                 previewEl.innerHTML = `
-    < div class="email-preview-card" >
+    <div class="email-preview-card">
                         <div class="email-subject"><strong>Subject:</strong> ${emailResult.subject}</div>
                         <div class="email-body">${emailResult.email.substring(0, 300)}...</div>
                         <div class="email-actions">
                             <button class="btn btn-small copy-email-btn">📋 Copy Full Email</button>
                             <button class="btn btn-small view-email-btn">👁️ View Full</button>
                         </div>
-                    </div >
+                    </div>
     `;
 
                 // Copy email handler
@@ -1212,14 +1212,14 @@ const App = {
                 statusEl.classList.add('hidden');
                 previewEl.classList.remove('hidden');
                 previewEl.innerHTML = `
-    < div class="email-preview-card termination" >
+    <div class="email-preview-card termination">
                         <div class="email-subject"><strong>Subject:</strong> ${emailResult.subject}</div>
                         <div class="email-body">${emailResult.email.substring(0, 300)}...</div>
                         <div class="email-actions">
                             <button class="btn btn-small copy-email-btn">📋 Copy Full Email</button>
                             <button class="btn btn-small view-email-btn">👁️ View Full</button>
                         </div>
-                    </div >
+                    </div>
     `;
 
                 // Copy email handler
@@ -1246,7 +1246,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.innerHTML = `
-    < div class="modal glass email-modal" >
+    <div class="modal glass email-modal">
                 <div class="modal-header">
                     <h3>📧 ${emailResult.subject}</h3>
                     <button class="modal-close">&times;</button>
@@ -1258,7 +1258,7 @@ const App = {
                     <button class="btn btn-primary copy-all-btn">📋 Copy to Clipboard</button>
                     <button class="btn btn-secondary close-btn">Close</button>
                 </div>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(modal);
@@ -1298,13 +1298,13 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'emergency-stop-overlay';
         overlay.innerHTML = `
-    < div class="emergency-content" >
+    <div class="emergency-content">
                 <div class="stop-icon">🛑</div>
                 <h1>SESSION STOPPED</h1>
                 <p class="stop-reason">${reason || 'Critical threshold reached'}</p>
                 <div class="stop-time">${new Date().toLocaleTimeString()}</div>
                 <button class="btn btn-large acknowledge-btn">Acknowledge & End Session</button>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(overlay);
@@ -1335,11 +1335,11 @@ const App = {
         const toast = document.createElement('div');
         toast.className = 'incident-toast glass';
         toast.innerHTML = `
-    < div class="toast-header" >
+    <div class="toast-header">
                 <span class="icon">${analysis.source === 'ai' ? '🤖' : '📊'}</span>
                 <span>Incident Logged - ${analysis.source === 'ai' ? 'AI Recommendation' : 'Standard Response'}</span>
                 <button class="toast-close">&times;</button>
-            </div >
+            </div>
     <div class="toast-body">
         <div class="rec-item">
             <strong>Immediate Action:</strong> ${analysis.recommendedStep}
@@ -1372,12 +1372,12 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'break-overlay';
         overlay.innerHTML = `
-    < div class="break-timer-display glass" >
+    <div class="break-timer-display glass">
                 <h2>Reset Break</h2>
                 <div class="break-countdown">${Utils.formatDuration(duration)}</div>
                 <p>Take a breath. Reset expectations.</p>
                 <button class="btn btn-secondary" id="endBreakBtn">End Early</button>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(overlay);
@@ -1450,7 +1450,7 @@ const App = {
         const rules = Methodology.getRules(band);
 
         main.innerHTML = `
-    < div class="page-rules" >
+    <div class="page-rules">
                 <div class="rules-header glass">
                     <h2>Universal Session Rules</h2>
                     <p>These rules apply to all tutoring sessions.</p>
@@ -1481,18 +1481,18 @@ const App = {
                         📺 Show Fullscreen Rules Card
                     </button>
                 </div>
-            </div >
+            </div>
     `;
 
         // Band selector
         document.getElementById('ruleBandSelect')?.addEventListener('change', (e) => {
             const newRules = Methodology.getRules(e.target.value);
             document.getElementById('rulesGrid').innerHTML = newRules.map(r => `
-    < div class="rule-card glass" >
+    <div class="rule-card glass">
                     <span class="rule-icon">${r.icon}</span>
                     <h3>${r.rule}</h3>
                     <p>${r.description}</p>
-                </div >
+                </div>
     `).join('');
         });
 
@@ -1511,7 +1511,7 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'fullscreen-overlay';
         overlay.innerHTML = `
-    < div class="fullscreen-rules" >
+    <div class="fullscreen-rules">
                 <h1>📚 Session Rules</h1>
                 <div class="fullscreen-rules-grid">
                     ${rules.map(r => `
@@ -1522,7 +1522,7 @@ const App = {
                     `).join('')}
                 </div>
                 <p class="fullscreen-cta">Let's have a great session! 🌟</p>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(overlay);
@@ -1555,7 +1555,7 @@ const App = {
         const categories = Methodology.getCategoryKeys();
 
         main.innerHTML = `
-    < div class="page-methodology" >
+    <div class="page-methodology">
                 <div class="methodology-header glass">
                     <h2>Discipline Methodology</h2>
                     <p>Grade-aware discipline ladder system with escalation paths and scripts.</p>
@@ -1570,7 +1570,7 @@ const App = {
                 <div class="methodology-content" id="methodologyContent">
                     ${this.renderMethodologyBands(config)}
                 </div>
-            </div >
+            </div>
     `;
 
         // Tab handlers
@@ -1597,7 +1597,7 @@ const App = {
 
     renderMethodologyBands(config) {
         return `
-    < div class="bands-grid" >
+    <div class="bands-grid">
         ${Object.entries(config.gradeBands).map(([key, band]) => `
                     <div class="band-card glass band-${key.toLowerCase()}">
                         <h3>Band ${key}: ${band.name}</h3>
@@ -1611,13 +1611,13 @@ const App = {
                     </div>
                 `).join('')
             }
-            </div >
+            </div>
     `;
     },
 
     renderMethodologyCategories(config) {
         return `
-    < div class="categories-accordion" >
+    <div class="categories-accordion">
         ${Object.entries(config.categories).map(([key, cat]) => `
                     <details class="category-item glass">
                         <summary>
@@ -1658,16 +1658,16 @@ const App = {
                     </details>
                 `).join('')
             }
-            </div >
+            </div>
     `;
     },
 
     renderMethodologySeverity(config) {
         return `
-    < div class="severity-intro glass" style = "margin-bottom: var(--space-4); padding: var(--space-4);" >
+    <div class="severity-intro glass" style="margin-bottom: var(--space-4); padding: var(--space-4);">
                 <h3 style="margin-bottom: var(--space-2);">Formal Severity Definitions</h3>
                 <p style="color: var(--text-secondary); margin: 0;">Severity levels are age-agnostic. Only the <em>mapping</em> of behaviors to levels changes by grade.</p>
-            </div >
+            </div>
     <div class="severity-grid">
         ${Object.entries(config.severityLevels).map(([level, info]) => `
                     <div class="severity-card glass" style="border-color: ${info.color}">
@@ -1708,7 +1708,7 @@ const App = {
         });
 
         main.innerHTML = `
-    < div class="page-incidents" >
+            <div class="page-incidents">
                 <div class="incidents-header glass">
                     <h2>Incident History</h2>
                     <div class="incidents-filters">
@@ -1734,8 +1734,8 @@ const App = {
                 <div class="incidents-by-student" id="incidentsByStudent">
                     ${this.renderIncidentsByStudent(incidentsByStudent, students)}
                 </div>
-            </div >
-    `;
+            </div>
+        `;
 
         // Filter handlers
         const applyFilters = async () => {
@@ -1800,18 +1800,18 @@ const App = {
             const studentGrade = student?.grade || 'N/A';
 
             // Calculate stats
-            const criticalCount = studentIncidents.filter(i => i.severity >= 4).length;
+            const criticalCount = studentIncidents.filter(i => i.severity>= 4).length;
             const unresolvedCount = studentIncidents.filter(i => !i.resolved).length;
 
             return `
-    < div class="student-incidents-section glass" data - student - id="${studentId}" >
+                <div class="student-incidents-section glass" data-student-id="${studentId}">
                     <div class="student-header">
                         <div class="student-info">
                             <h3>${Utils.escapeHTML(studentName)}</h3>
                             <span class="student-grade">Grade ${studentGrade}</span>
                             <span class="incident-count">${studentIncidents.length} incident${studentIncidents.length !== 1 ? 's' : ''}</span>
-                            ${criticalCount > 0 ? `<span class="critical-badge">${criticalCount} critical</span>` : ''}
-                            ${unresolvedCount > 0 ? `<span class="unresolved-badge">${unresolvedCount} unresolved</span>` : ''}
+                            ${criticalCount> 0 ? `<span class="critical-badge">${criticalCount} critical</span>` : ''}
+                            ${unresolvedCount> 0 ? `<span class="unresolved-badge">${unresolvedCount} unresolved</span>` : ''}
                         </div>
                         <div class="student-actions">
                             <button class="btn btn-small btn-secondary export-pdf-btn" data-student-id="${studentId}">
@@ -1822,8 +1822,8 @@ const App = {
                     <div class="student-incidents-table">
                         ${this.renderIncidentsList(studentIncidents)}
                     </div>
-                </div >
-    `;
+                </div>
+            `;
         }).join('');
     },
 
@@ -1878,7 +1878,7 @@ const App = {
         });
 
         return `
-    < !DOCTYPE html >
+    < !DOCTYPE html>
         <html>
             <head>
                 <title>Incident Report - ${Utils.escapeHTML(student.name)}</title>
@@ -1975,7 +1975,7 @@ const App = {
         }
 
         return `
-    < table class="incidents-table" >
+    < table class="incidents-table">
                 <thead>
                     <tr>
                         <th>Date/Time</th>
@@ -2000,7 +2000,7 @@ const App = {
                         `;
         }).join('')}
                 </tbody>
-            </table >
+            </table>
     `;
     },
 
@@ -2017,7 +2017,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.innerHTML = `
-    < div class="modal modal-large glass" >
+    <div class="modal modal-large glass">
                 <div class="modal-header">
                     <h3>${detail.categoryIcon} ${detail.categoryLabel}</h3>
                     <button class="modal-close">&times;</button>
@@ -2077,7 +2077,7 @@ const App = {
                     ` : ''}
                     <button class="btn btn-secondary modal-cancel">Close</button>
                 </div>
-            </div >
+            </div>
     `;
 
         document.body.appendChild(modal);
@@ -2107,7 +2107,7 @@ const App = {
         const patterns = Incidents.analyzePatterns(allIncidents);
 
         main.innerHTML = `
-    < div class="page-reports" >
+    <div class="page-reports">
                 <div class="reports-header glass">
                     <h2>Reports & Insights</h2>
                 </div>
@@ -2119,7 +2119,7 @@ const App = {
                             <div class="insights-list">
                                 ${patterns.insights.map(i => `<p class="insight">💡 ${i}</p>`).join('')}
                             </div>
-                            ${patterns.topCategories.length > 0 ? `
+                            ${patterns.topCategories.length> 0 ? `
                                 <h4>Top Categories</h4>
                                 <ul>
                                     ${patterns.topCategories.map(c => `<li>${c.label}: ${c.count} (${c.percentage}%)</li>`).join('')}
@@ -2169,13 +2169,13 @@ const App = {
                                 <span class="label">Resolved</span>
                             </div>
                             <div class="stat">
-                                <span class="value">${sessions.length > 0 ? (allIncidents.length / sessions.length).toFixed(1) : 0}</span>
+                                <span class="value">${sessions.length> 0 ? (allIncidents.length / sessions.length).toFixed(1) : 0}</span>
                                 <span class="label">Avg per Session</span>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div >
+            </div>
     `;
 
         // Report handlers
@@ -2227,7 +2227,7 @@ const App = {
         const settings = await DB.getSettings();
 
         main.innerHTML = `
-    < div class="page-settings" >
+    <div class="page-settings">
         <div class="settings-section glass">
             <h2>⚙️ Settings</h2>
 
@@ -2279,7 +2279,7 @@ const App = {
 
             <button id="saveSettingsBtn" class="btn btn-primary btn-large">Save Settings</button>
         </div>
-            </div >
+            </div>
     `;
 
         // Save settings
@@ -2362,7 +2362,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'ai-modal';
         modal.innerHTML = `
-    < div class="ai-modal-content glass" >
+    <div class="ai-modal-content glass">
                 <div class="ai-modal-header">
                     <h3>✨ ${title}</h3>
                     <button class="close-btn">&times;</button>
@@ -2371,7 +2371,7 @@ const App = {
                     ${content}
                 </div>
                 ${footer ? `<div class="ai-modal-footer">${footer}</div>` : ''}
-            </div >
+            </div>
     `;
 
         document.body.appendChild(modal);
@@ -2397,10 +2397,10 @@ const App = {
      */
     showAILoading(title) {
         return this.showAIModal(title, `
-    < div class="ai-loading" >
+    <div class="ai-loading">
                 <div class="spinner"></div>
                 <p>AI is thinking...</p>
-            </div >
+            </div>
     `);
     },
 
@@ -2430,7 +2430,7 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-unavailable" >
+    <div class="ai-unavailable">
                     <div class="icon">🤖</div>
                     <p>AI is currently unavailable. Try these steps:</p>
                     <ul style="text-align:left">
@@ -2439,16 +2439,16 @@ const App = {
                         <li>Ask: "What do you need right now?"</li>
                         <li>Consider a short break</li>
                     </ul>
-                </div >
+                </div>
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-response-card" style = "margin-top: 1.5rem;" >
+    <div class="ai-response-card" style="margin-top: 1.5rem;">
                 <h4>🚨 Immediate Action</h4>
                 <p><strong>${result.immediateAction}</strong></p>
-            </div >
+            </div>
             
             <div class="ai-script-item neutral">
                 <div class="tone-label">Say This</div>
@@ -2504,18 +2504,18 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-unavailable" >
+    <div class="ai-unavailable">
                     <div class="icon">🤖</div>
                     <p>AI prep briefing unavailable. No prior incidents to analyze.</p>
-                </div >
+                </div>
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}" >
+    <div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}">
         Risk Level: ${result.riskLevel || 'Low'}
-            </div >
+            </div>
 
     ${result.keyPatterns?.length ? `
             <div class="ai-response-card" style="margin-top: 1.5rem;">
@@ -2576,16 +2576,16 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-unavailable" >
+    <div class="ai-unavailable">
                     <div class="icon">🤖</div>
                     <p>AI goal suggestions unavailable.</p>
-                </div >
+                </div>
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-goals-list" >
+    <div class="ai-goals-list">
         <div class="ai-goal-item primary" onclick="this.classList.toggle('selected')">
             <div class="goal-check">✓</div>
             <div class="goal-text">
@@ -2612,7 +2612,7 @@ const App = {
                     </div>
                 `).join('') || ''
             }
-            </div >
+            </div>
 
     ${result.rationale ? `
             <div class="insight-item" style="margin-top: 1rem;">
@@ -2629,7 +2629,7 @@ const App = {
         modal.querySelector('.ai-modal-footer')?.remove();
         const footer = document.createElement('div');
         footer.className = 'ai-modal-footer';
-        footer.innerHTML = `< button class="btn btn-primary" id = "applyGoalsBtn" > Apply Selected Goals</button > `;
+        footer.innerHTML = `< button class="btn btn-primary" id = "applyGoalsBtn"> Apply Selected Goals</button> `;
         modal.querySelector('.ai-modal-content').appendChild(footer);
 
         footer.querySelector('#applyGoalsBtn').addEventListener('click', () => {
@@ -2665,18 +2665,18 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-unavailable" >
+    <div class="ai-unavailable">
                     <div class="icon">🤖</div>
                     <p>AI summary generation unavailable.</p>
-                </div >
+                </div>
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}" >
+    <div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}">
         Session Rating: ${result.overallRating?.charAt(0).toUpperCase() + result.overallRating?.slice(1)}
-            </div >
+            </div>
 
     <div class="ai-response-card" style="margin-top: 1.5rem;">
         <h4>📋 Summary</h4>
@@ -2727,18 +2727,18 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="ai-unavailable" >
+    <div class="ai-unavailable">
                     <div class="icon">🤖</div>
                     <p>AI pattern analysis unavailable or insufficient data.</p>
-                </div >
+                </div>
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    < div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}" >
+    <div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}">
         Trend: ${result.overallTrend?.charAt(0).toUpperCase() + result.overallTrend?.slice(1)}
-            </div >
+            </div>
 
     <p style="margin: 1rem 0;">${result.trendSummary}</p>
             
