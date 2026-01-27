@@ -3126,72 +3126,83 @@ tr.incident-row:hover {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, rgba(220, 38, 38, 0.95), rgba(185, 28, 28, 0.95));
-    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(153, 27, 27, 0.98), rgba(127, 29, 29, 0.98));
+    backdrop-filter: blur(25px);
     z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: emergencyFadeIn 0.3s ease-out;
+    animation: emergencyFadeIn 0.5s ease-out;
 }
 
 .stop-content {
     width: 90%;
-    max-width: 500px;
-    padding: var(--space-6);
+    max-width: 600px;
+    padding: var(--space-8);
     text-align: center;
-    background: rgba(0, 0, 0, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
 
 .stop-header {
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-6);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: var(--space-4);
 }
 
 .stop-header .stop-icon {
-    font-size: 4rem;
-    margin-bottom: var(--space-3);
+    font-size: 5rem;
+    margin-bottom: var(--space-2);
+    animation: pulse-danger 2s infinite;
+    display: inline-block;
 }
 
 .stop-header h1 {
-    font-size: var(--font-size-2xl);
+    font-size: 3rem;
     font-weight: 900;
     color: white;
     margin: 0;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
+    font-family: var(--font-primary);
+    /* Ensure strong sans-serif */
 }
 
 .stop-details {
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-6);
 }
 
 .severity-badge {
     display: inline-block;
-    padding: var(--space-2) var(--space-4);
+    padding: var(--space-2) var(--space-5);
     border-radius: var(--radius-full);
-    font-weight: 700;
+    font-weight: 800;
     font-size: var(--font-size-sm);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: var(--space-3);
+    letter-spacing: 2px;
+    margin-bottom: var(--space-4);
 }
 
 .severity-badge.critical {
-    background: rgba(255, 255, 255, 0.9);
-    color: #dc2626;
+    background: white;
+    color: #991b1b;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .severity-badge.terminating {
-    background: #7f1d1d;
-    color: white;
-    border: 2px solid white;
+    background: #000;
+    color: #ef4444;
+    border: 2px solid #ef4444;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
 }
 
 .stop-reason {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: var(--font-size-base);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: var(--font-size-lg);
     line-height: 1.6;
+    font-weight: 500;
 }
 
 .stop-time {
@@ -3202,48 +3213,58 @@ tr.incident-row:hover {
 
 .stop-script,
 .termination-script {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: var(--radius-md);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
+    background: rgba(0, 0, 0, 0.3);
+    border-left: 4px solid white;
+    border-radius: var(--radius-sm);
+    padding: var(--space-5);
+    margin-bottom: var(--space-6);
     text-align: left;
 }
 
 .stop-script .script-label,
 .termination-script .script-label {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--space-2);
 }
 
 .stop-script .script-text,
 .termination-script .script-text {
     color: white;
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-xl);
+    font-style: italic;
+    font-weight: 300;
+    font-family: serif;
+    /* More formal tone */
 }
 
 .email-draft-section {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: var(--radius-md);
     padding: var(--space-4);
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 .email-status {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2);
-    color: rgba(255, 255, 255, 0.8);
+    gap: var(--space-3);
+    color: rgba(255, 255, 255, 0.9);
     font-size: var(--font-size-sm);
+    font-weight: 500;
 }
 
 .loading-spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
     border-top-color: white;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -3255,100 +3276,128 @@ tr.incident-row:hover {
 .email-preview-card {
     background: white;
     color: #333;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     padding: var(--space-4);
     text-align: left;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .email-preview-card.termination {
-    border-left: 4px solid #7f1d1d;
+    border-left: 6px solid #991b1b;
 }
 
 .email-subject {
     font-size: var(--font-size-sm);
     margin-bottom: var(--space-2);
     padding-bottom: var(--space-2);
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 600;
 }
 
 .email-preview-card .email-body {
     font-size: var(--font-size-sm);
-    color: #666;
+    color: #4b5563;
     line-height: 1.6;
     margin-bottom: var(--space-3);
+    white-space: pre-wrap;
 }
 
 .email-actions {
     display: flex;
     gap: var(--space-2);
+    justify-content: flex-end;
 }
 
 .stop-actions,
 .termination-actions {
     display: flex;
-    gap: var(--space-3);
+    gap: var(--space-4);
     justify-content: center;
     flex-wrap: wrap;
 }
 
 .stop-actions .btn,
 .termination-actions .btn {
-    min-width: 160px;
+    min-width: 180px;
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--font-size-base);
 }
 
-/* Termination Overlay (Level 5) */
+/* Termination Overlay (Level 5) - ULTRA DRAMATIC */
 .termination-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(127, 29, 29, 0.95));
-    backdrop-filter: blur(20px);
+    background: #0a0a0a;
+    /* Solid black base */
     z-index: 10001;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: emergencyFadeIn 0.3s ease-out;
+    animation: emergencyFadeIn 0.8s ease-out;
+}
+
+.termination-overlay::before {
+    /* Subtle red glow from bottom */
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: linear-gradient(to top, rgba(127, 29, 29, 0.4), transparent);
+    pointer-events: none;
 }
 
 .termination-content {
     width: 90%;
-    max-width: 500px;
-    padding: var(--space-6);
+    max-width: 650px;
+    padding: var(--space-8);
     text-align: center;
-    background: rgba(127, 29, 29, 0.3);
-    border: 2px solid rgba(127, 29, 29, 0.5);
+    background: #111;
+    border: 1px solid #333;
+    border-top: 4px solid #ef4444;
+    box-shadow: 0 0 100px rgba(239, 68, 68, 0.15);
+    position: relative;
+    z-index: 2;
 }
 
 .termination-header .termination-icon {
-    font-size: 4rem;
-    margin-bottom: var(--space-3);
+    font-size: 6rem;
+    margin-bottom: var(--space-4);
+    filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.4));
 }
 
 .termination-header h1 {
-    font-size: var(--font-size-xl);
+    font-size: 3.5rem;
     font-weight: 900;
-    color: #fca5a5;
+    color: #f87171;
     margin: 0;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 6px;
+    line-height: 1.1;
 }
 
 .termination-details {
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-8);
 }
 
 .termination-reason {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: var(--font-size-base);
+    color: #d1d5db;
+    font-size: 1.25rem;
     line-height: 1.6;
+    max-width: 80%;
+    margin: 0 auto;
 }
 
 .termination-time {
-    color: rgba(255, 255, 255, 0.5);
+    color: #6b7280;
     font-size: var(--font-size-sm);
-    margin-top: var(--space-2);
+    margin-top: var(--space-4);
+    font-family: monospace;
+    letter-spacing: 1px;
 }
 
 /* Email Modal */

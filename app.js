@@ -825,15 +825,22 @@ const App = {
      * External structure: visible, immediate, clear
      * Features milestone-based progress bar toward consequences
      */
-    showYoungerStudentFeedback(analysis, category, urgencyColors, warningColors) {
+    /**
+     * Prominent visual feedback for younger students (Grades 1-6)
+     * External structure: visible, immediate, clear
+     * Features milestone-based progress bar toward consequences
+     */
+    async showYoungerStudentFeedback(analysis, category, urgencyColors, warningColors) {
         // Remove any existing overlay
         document.querySelector('.severity-overlay')?.remove();
 
         const severityInfo = Methodology.getSeverity(analysis.severity);
 
         // Calculate progress based on cumulative severity
-        // L1=+10%, L2=+25%, L3=+50%, L4=100%
-        const progressPercent = this.calculateConsequenceProgress();
+        // Ensure we have fresh incidents from session summary
+        const sessionSummary = await Session.getSessionSummary();
+        const incidents = sessionSummary.incidents || [];
+        const progressPercent = this.calculateConsequenceProgress(incidents);
 
         const overlay = document.createElement('div');
         overlay.className = `severity-overlay severity-${analysis.severity}`;
@@ -928,13 +935,14 @@ const App = {
      * Calculate consequence progress as percentage (0-100)
      * Based on cumulative severity: L1=+10%, L2=+25%, L3=+50%, L4=100%
      */
-    calculateConsequenceProgress() {
-        if (!Session.currentSession) return 0;
+    calculateConsequenceProgress(incidents = null) {
+        // Use provided incidents or fallback to current session
+        const incidentList = incidents || Session.currentSession?.incidents || [];
+        if (!incidentList || incidentList.length === 0) return 0;
 
-        const incidents = Session.currentSession.incidents || [];
         let progress = 0;
 
-        for (const incident of incidents) {
+        for (const incident of incidentList) {
             switch (incident.severity) {
                 case 1: progress += 10; break;
                 case 2: progress += 25; break;
@@ -1052,8 +1060,15 @@ const App = {
         // Play alert sound
         this.playAlertSound();
 
-        // Draft AI email in background
-        this.draftCriticalIncidentEmail(incident, overlay);
+        // Draft AI email in background with robust error handling
+        this.draftCriticalIncidentEmail(incident, overlay).catch(err => {
+            console.error("Email draft failed:", err);
+            const emailSection = overlay.querySelector('.email-draft-section');
+            if (emailSection) {
+                const statusEl = emailSection.querySelector('.email-status');
+                if (statusEl) statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
+            }
+        });
 
         // Continue session handler (timer keeps running for more incidents)
         overlay.querySelector('.continue-session-btn').addEventListener('click', () => {
@@ -1126,7 +1141,14 @@ const App = {
         this.playAlertSound();
 
         // Draft AI termination email
-        this.draftTerminationEmail(incident, overlay);
+        this.draftTerminationEmail(incident, overlay).catch(err => {
+            console.error("Termination email draft failed:", err);
+            const emailSection = overlay.querySelector('.email-draft-section');
+            if (emailSection) {
+                const statusEl = emailSection.querySelector('.email-status');
+                if (statusEl) statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
+            }
+        });
 
         // End session handler
         overlay.querySelector('.end-session-btn').addEventListener('click', async () => {
@@ -1143,6 +1165,8 @@ const App = {
      */
     async draftCriticalIncidentEmail(incident, overlay) {
         const emailSection = overlay.querySelector('.email-draft-section');
+        if (!emailSection) return;
+
         const statusEl = emailSection.querySelector('.email-status');
         const previewEl = emailSection.querySelector('.email-preview');
 
@@ -1158,8 +1182,10 @@ const App = {
                 allIncidents
             );
 
+            // Hide loading state immediately
+            statusEl.classList.add('hidden');
+
             if (emailResult) {
-                statusEl.classList.add('hidden');
                 previewEl.classList.remove('hidden');
                 previewEl.innerHTML = `
     <div class="email-preview-card">
@@ -1183,8 +1209,14 @@ const App = {
                 previewEl.querySelector('.view-email-btn')?.addEventListener('click', () => {
                     this.showFullEmailModal(emailResult);
                 });
+            } else {
+                // Should not happen as AI.js has fallback, but just in case
+                statusEl.classList.remove('hidden');
+                statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
             }
         } catch (error) {
+            console.error("Error in draftCriticalIncidentEmail:", error);
+            statusEl.classList.remove('hidden');
             statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
         }
     },
@@ -1194,6 +1226,8 @@ const App = {
      */
     async draftTerminationEmail(incident, overlay) {
         const emailSection = overlay.querySelector('.email-draft-section');
+        if (!emailSection) return;
+
         const statusEl = emailSection.querySelector('.email-status');
         const previewEl = emailSection.querySelector('.email-preview');
 
@@ -1208,8 +1242,10 @@ const App = {
                 allStudentIncidents
             );
 
+            // Hide loading state
+            statusEl.classList.add('hidden');
+
             if (emailResult) {
-                statusEl.classList.add('hidden');
                 previewEl.classList.remove('hidden');
                 previewEl.innerHTML = `
     <div class="email-preview-card termination">
@@ -1233,8 +1269,13 @@ const App = {
                 previewEl.querySelector('.view-email-btn')?.addEventListener('click', () => {
                     this.showFullEmailModal(emailResult);
                 });
+            } else {
+                statusEl.classList.remove('hidden');
+                statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
             }
         } catch (error) {
+            console.error("Error in draftTerminationEmail:", error);
+            statusEl.classList.remove('hidden');
             statusEl.innerHTML = '<span style="color: var(--warning)">⚠️ Email draft unavailable</span>';
         }
     },
@@ -1857,25 +1898,43 @@ const App = {
      * Export student's incident history as PDF (uses browser print)
      */
     async exportStudentIncidentsPDF(studentId) {
-        const student = await DB.getStudent(studentId);
-        const incidents = await DB.getIncidentsByStudent(studentId);
+        // Open window IMMEDIATELY to satisfy popup blockers
+        const printWindow = window.open('', '_blank');
 
-        if (!student || incidents.length === 0) {
-            this.showError('No incidents to export');
+        if (!printWindow) {
+            this.showError('Popup blocked. Please allow popups for this site.');
             return;
         }
 
-        // Create printable content
-        const printWindow = window.open('', '_blank');
-        const content = this.generateIncidentReportHTML(student, incidents);
+        printWindow.document.write('<h1>Generating Report...</h1>');
 
-        printWindow.document.write(content);
-        printWindow.document.close();
+        try {
+            const student = await DB.getStudent(studentId);
+            const incidents = await DB.getIncidentsByStudent(studentId);
 
-        // Wait for content to load then print
-        printWindow.onload = () => {
-            printWindow.print();
-        };
+            if (!student || incidents.length === 0) {
+                printWindow.close();
+                this.showError('No incidents to export');
+                return;
+            }
+
+            // Create printable content
+            const content = this.generateIncidentReportHTML(student, incidents);
+
+            printWindow.document.open();
+            printWindow.document.write(content);
+            printWindow.document.close();
+
+            // Wait for content to load then print
+            printWindow.onload = () => {
+                printWindow.focus();
+                printWindow.print();
+            };
+        } catch (e) {
+            printWindow.close();
+            console.error('Export failed:', e);
+            this.showError('Failed to generate export');
+        }
     },
 
     /**
