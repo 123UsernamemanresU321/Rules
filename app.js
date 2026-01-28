@@ -264,6 +264,14 @@ const App = {
         } else {
             // Active session - show control room
             const summary = await Session.getSessionSummary();
+
+            if (!summary) {
+                console.error('Active session found but summary is null');
+                // Fallback to start screen if data is corrupt
+                this.renderStartScreen();
+                return;
+            }
+
             const recommendation = Session.getNextRecommendation();
             const shouldStop = Session.checkSessionStop();
 
@@ -272,9 +280,9 @@ const App = {
                     <!-- Header with timer and student info -->
                     <div class="session-header glass">
                         <div class="student-info">
-                            <span class="student-name">${Utils.escapeHTML(summary.studentName)}</span>
-                            <span class="grade-badge band-${summary.gradeBand.toLowerCase()}">
-                                Grade ${summary.studentGrade} • Band ${summary.gradeBand}
+                            <span class="student-name">${Utils.escapeHTML(summary.studentName || 'Student')}</span>
+                            <span class="grade-badge band-${(summary.gradeBand || '3-5').toLowerCase()}">
+                                Grade ${summary.studentGrade || '?'} • Band ${summary.gradeBand || '?'}
                             </span>
                         </div>
                         <div class="session-timer">

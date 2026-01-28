@@ -5,7 +5,7 @@
 
 const DB = {
     name: 'SessionOrderOS',
-    version: 1,
+    version: 2,
     db: null,
 
     /**
@@ -29,6 +29,7 @@ const DB = {
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
+                const transaction = event.target.transaction;
 
                 // Students store
                 if (!db.objectStoreNames.contains('students')) {
@@ -47,13 +48,20 @@ const DB = {
                 }
 
                 // Incidents store
+                let incidentsStore;
                 if (!db.objectStoreNames.contains('incidents')) {
-                    const incidentsStore = db.createObjectStore('incidents', { keyPath: 'id' });
+                    incidentsStore = db.createObjectStore('incidents', { keyPath: 'id' });
                     incidentsStore.createIndex('sessionId', 'sessionId', { unique: false });
                     incidentsStore.createIndex('category', 'category', { unique: false });
                     incidentsStore.createIndex('severity', 'severity', { unique: false });
                     incidentsStore.createIndex('timestamp', 'timestamp', { unique: false });
                     incidentsStore.createIndex('resolved', 'resolved', { unique: false });
+                    incidentsStore.createIndex('studentId', 'studentId', { unique: false }); // Added in v2
+                } else {
+                    incidentsStore = transaction.objectStore('incidents');
+                    if (!incidentsStore.indexNames.contains('studentId')) {
+                        incidentsStore.createIndex('studentId', 'studentId', { unique: false });
+                    }
                 }
 
                 // Config store
@@ -352,6 +360,11 @@ const DB = {
     async getSessionIncidents(sessionId) {
         const incidents = await this.getByIndex('incidents', 'sessionId', sessionId);
         return incidents.sort((a, b) => a.timestamp - b.timestamp);
+    },
+
+    async getIncidentsByStudent(studentId) {
+        const incidents = await this.getByIndex('incidents', 'studentId', studentId);
+        return incidents.sort((a, b) => b.timestamp - a.timestamp);
     },
 
     async getAllIncidents() {
