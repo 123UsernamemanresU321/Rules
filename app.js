@@ -359,32 +359,9 @@ const App = {
                         </div>
 
                         <!-- Recommendation Panel -->
-                        <div class="recommendation-panel glass">
-                            <h3>Next Recommended Step</h3>
-                            ${recommendation.category ? `
-                                <div class="recommendation">
-                                    <div class="rec-header">
-                                        <span class="category">${Methodology.getCategory(recommendation.category)?.label || recommendation.category}</span>
-                                        <span class="count">${recommendation.count || 0} incidents</span>
-                                    </div>
-                                    <div class="rec-action">
-                                        <strong>Action:</strong> ${recommendation.step?.action || 'Observe'}
-                                    </div>
-                                    <div class="script-tabs">
-                                        <button class="script-tab active" data-tone="gentle">Gentle</button>
-                                        <button class="script-tab" data-tone="neutral">Neutral</button>
-                                        <button class="script-tab" data-tone="firm">Firm</button>
-                                    </div>
-                                    <div class="script-content" id="currentScript">
-                                        "${this.getCurrentScript(recommendation, 'gentle')}"
-                                    </div>
-                                </div>
-                            ` : `
-                                <div class="no-recommendation">
-                                    <span class="icon">✨</span>
-                                    <p>${recommendation.message || 'Session proceeding well'}</p>
-                                </div>
-                            `}
+                        <!-- Recommendation Panel -->
+                        <div class="recommendation-panel glass" id="recPanelContent">
+                            ${this.renderRecommendationPanelContent(recommendation)}
                         </div>
                     </div>
 
@@ -418,9 +395,70 @@ const App = {
      * Get current script for recommendation
      */
     getCurrentScript(recommendation, tone) {
-        if (!recommendation.category) return '';
+        if (!recommendation.category || !recommendation) return '';
         const band = Session.getGradeBand();
         return Methodology.getScript(recommendation.category, band, tone);
+    },
+
+    /**
+     * Render the content of the recommendation panel
+     */
+    renderRecommendationPanelContent(recommendation) {
+        if (!recommendation) return '';
+        return `
+            <h3>Next Recommended Step</h3>
+            ${recommendation.category ? `
+                <div class="recommendation">
+                    <div class="rec-header">
+                        <span class="category">${Methodology.getCategory(recommendation.category)?.label || recommendation.category}</span>
+                        <span class="count">${recommendation.count || 0} incidents</span>
+                    </div>
+                    <div class="rec-action">
+                        <strong>Action:</strong> ${recommendation.step?.action || 'Observe'}
+                    </div>
+                    <div class="script-tabs">
+                        <button class="script-tab active" data-tone="gentle">Gentle</button>
+                        <button class="script-tab" data-tone="neutral">Neutral</button>
+                        <button class="script-tab" data-tone="firm">Firm</button>
+                    </div>
+                    <div class="script-content" id="currentScript">
+                        "${this.getCurrentScript(recommendation, 'gentle')}"
+                    </div>
+                </div>
+            ` : `
+                <div class="no-recommendation">
+                    <span class="icon">✨</span>
+                    <p>${recommendation.message || 'Session proceeding well'}</p>
+                </div>
+            `}
+        `;
+    },
+
+    /**
+     * Update recommendation panel without full re-render
+     */
+    updateRecommendationPanel() {
+        const panelEl = document.getElementById('recPanelContent');
+        if (panelEl) {
+            const recommendation = Session.getNextRecommendation();
+            this.currentRecommendation = recommendation;
+            panelEl.innerHTML = this.renderRecommendationPanelContent(recommendation);
+
+            // Re-bind script tabs specifically in the new HTML
+            const tabs = panelEl.querySelectorAll('.script-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const tone = tab.dataset.tone;
+                    const scriptEl = panelEl.querySelector('#currentScript');
+                    if (scriptEl && this.currentRecommendation) {
+                        scriptEl.textContent = `"${this.getCurrentScript(this.currentRecommendation, tone)}"`;
+                    }
+                });
+            });
+        }
     },
 
     /**
@@ -435,15 +473,15 @@ const App = {
             const cat = Methodology.getCategory(i.category);
             const sev = Methodology.getSeverity(i.severity);
             return `
-                <div class="incident-row" data-id="${i.id}">
+                            < div class="incident-row" data - id="${i.id}" >
                     <span class="time">${Utils.formatDuration(i.timeIntoSession || 0)}</span>
                     <span class="icon">${cat?.icon || '❓'}</span>
                     <span class="category">${cat?.shortLabel || i.category}</span>
                     <span class="severity" style="color: ${sev.color}">Sev ${i.severity}</span>
                     <span class="description">${Utils.truncate(i.description, 40)}</span>
                     <span class="status">${i.resolved ? '✅' : '🔴'}</span>
-                </div>
-            `;
+                </div >
+    `;
         }).join('');
     },
 
@@ -491,7 +529,7 @@ const App = {
             try {
                 const student = await DB.addStudent({ name, grade });
                 this.renderSessionPage(); // Refresh to show new student
-                this.showSuccess(`Added ${name}`);
+                this.showSuccess(`Added ${name} `);
             } catch (error) {
                 this.showError('Failed to add student');
             }
@@ -605,7 +643,7 @@ const App = {
                 if (action === 'reset_break' && duration) {
                     this.showBreakTimer(duration);
                 } else {
-                    this.showSuccess(`Applied: ${action.replace('_', ' ')}`);
+                    this.showSuccess(`Applied: ${action.replace('_', ' ')} `);
                 }
             });
         });
@@ -655,24 +693,24 @@ const App = {
                 const modal = document.querySelector('.ai-modal');
                 if (modal) {
                     modal.querySelector('.ai-modal-body').innerHTML = `
-                        <div class="ai-scripts">
-                            <div class="ai-script-item gentle">
-                                <div class="tone-label">Gentle</div>
-                                <p class="script-text">"${result.gentle}"</p>
-                                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.gentle.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
-                            </div>
-                            <div class="ai-script-item neutral">
-                                <div class="tone-label">Neutral</div>
-                                <p class="script-text">"${result.neutral}"</p>
-                                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.neutral.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
-                            </div>
-                            <div class="ai-script-item firm">
-                                <div class="tone-label">Firm</div>
-                                <p class="script-text">"${result.firm}"</p>
-                                <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.firm.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
-                            </div>
-                        </div>
-                        ${result.tips?.length ? `
+    < div class="ai-scripts" >
+        <div class="ai-script-item gentle">
+            <div class="tone-label">Gentle</div>
+            <p class="script-text">"${result.gentle}"</p>
+            <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.gentle.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
+                            </div >
+    <div class="ai-script-item neutral">
+        <div class="tone-label">Neutral</div>
+        <p class="script-text">"${result.neutral}"</p>
+        <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.neutral.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
+                            </div >
+    <div class="ai-script-item firm">
+        <div class="tone-label">Firm</div>
+        <p class="script-text">"${result.firm}"</p>
+        <button class="copy-script-btn" onclick="navigator.clipboard.writeText('${result.firm.replace(/'/g, "\\'").replace(/"/g, '')}'); this.textContent='Copied!'">📋 Copy</button>
+                            </div >
+                        </div >
+    ${result.tips?.length ? `
                         <div class="insight-item" style="margin-top: 1rem;">
                             <div class="icon">💡</div>
                             <div class="content">
@@ -680,8 +718,9 @@ const App = {
                                 <ul>${result.tips.map(t => `<li>${t}</li>`).join('')}</ul>
                             </div>
                         </div>
-                        ` : ''}
-                    `;
+                        ` : ''
+                        }
+`;
                 }
             }
         });
@@ -701,7 +740,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.innerHTML = `
-            <div class="modal glass">
+    < div class="modal glass" >
                 <div class="modal-header">
                     <h3>${cat.icon} Log ${cat.label}</h3>
                     <button class="modal-close">&times;</button>
@@ -724,8 +763,8 @@ const App = {
                         <span class="btn-loading hidden">Analyzing...</span>
                     </button>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(modal);
 
@@ -780,9 +819,8 @@ const App = {
                     // Level 4: Critical - auto session stop, draft email, but timer continues
                     this.showSessionStopOverlay(analysis, result.incident);
                 } else {
-                    // Level 1-3: Show feedback and refresh
+                    // Level 1-3: Show feedback
                     this.showSmartAnalysisResult(analysis, cat);
-                    this.renderSessionPage();
                 }
 
             } catch (error) {
@@ -851,9 +889,9 @@ const App = {
         const progressPercent = this.calculateConsequenceProgress(incidents);
 
         const overlay = document.createElement('div');
-        overlay.className = `severity-overlay severity-${analysis.severity}`;
+        overlay.className = `severity - overlay severity - ${analysis.severity} `;
         overlay.innerHTML = `
-            <div class="severity-display glass">
+    < div class="severity-display glass" >
                 <div class="severity-header">
                     <div class="severity-number" style="background: ${severityInfo.color}">${analysis.severity}</div>
                     <div class="severity-info">
@@ -868,7 +906,7 @@ const App = {
                     <div class="script-text">${analysis.actionPlan?.scriptForStudent || 'Focus on our work now.'}</div>
                 </div>
                 
-                <!-- Milestone Progress Bar -->
+                <!--Milestone Progress Bar-- >
                 <div class="consequence-progress-milestones">
                     <div class="progress-label">⚡ Consequence Progress</div>
                     <div class="milestone-bar" style="--progress: ${progressPercent}%">
@@ -914,8 +952,8 @@ const App = {
                 </div>
                 
                 <button class="btn btn-secondary close-overlay-btn">Got it</button>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(overlay);
 
@@ -971,33 +1009,33 @@ const App = {
         const toast = document.createElement('div');
         toast.className = 'action-recommendation-toast glass subtle';
         toast.innerHTML = `
-            <div class="toast-header">
+    < div class="toast-header" >
                 <span class="severity-indicator" style="background: ${Methodology.getSeverity(analysis.severity).color}"></span>
                 <span class="title">${category.label}</span>
                 <button class="toast-close">&times;</button>
-            </div>
-            <div class="toast-body">
-                ${analysis.actionPlan?.scriptForStudent ? `
+            </div >
+    <div class="toast-body">
+        ${analysis.actionPlan?.scriptForStudent ? `
                     <p class="script-suggestion">"${analysis.actionPlan.scriptForStudent.replace(/"/g, '')}"</p>
                 ` : ''}
-                
-                <div class="action-hint" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
-                    ${analysis.actionPlan?.message || 'Continue as planned.'}
-                </div>
-                
-                ${analysis.patternDetected ? `
+
+        <div class="action-hint" style="color: ${urgencyColors[analysis.actionPlan?.urgency || 'low']}">
+            ${analysis.actionPlan?.message || 'Continue as planned.'}
+        </div>
+
+        ${analysis.patternDetected ? `
                     <div class="pattern-note">
                         📊 ${analysis.patternDetected}
                     </div>
                 ` : ''}
-                
-                ${analysis.actionPlan?.type === 'break' && analysis.actionPlan?.duration ? `
+
+        ${analysis.actionPlan?.type === 'break' && analysis.actionPlan?.duration ? `
                     <button class="btn btn-small btn-secondary start-break-btn" data-duration="${analysis.actionPlan.duration}">
                         Quick break
                     </button>
                 ` : ''}
-            </div>
-        `;
+    </div>
+`;
 
         document.body.appendChild(toast);
 
@@ -1031,7 +1069,7 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'session-stop-overlay level-4';
         overlay.innerHTML = `
-            <div class="stop-content glass">
+    < div class="stop-content glass" >
                 <div class="stop-header">
                     <div class="stop-icon">🛑</div>
                     <h1>LEVEL 4 - SESSION STOP</h1>
@@ -1060,7 +1098,7 @@ const App = {
                     <button class="btn btn-secondary continue-session-btn">Continue Session (Timer Runs)</button>
                     <button class="btn btn-primary end-session-btn">End Session Now</button>
                 </div>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(overlay);
@@ -1112,7 +1150,7 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'termination-overlay level-5';
         overlay.innerHTML = `
-    <div class="termination-content glass">
+    < div class="termination-content glass" >
                 <div class="termination-header">
                     <div class="termination-icon">⛔</div>
                     <h1>LEVEL 5 - SERVICE TERMINATION</h1>
@@ -1140,7 +1178,7 @@ const App = {
                 <div class="termination-actions">
                     <button class="btn btn-primary end-session-btn">End Session & Confirm Termination</button>
                 </div>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(overlay);
@@ -1196,14 +1234,14 @@ const App = {
             if (emailResult) {
                 previewEl.classList.remove('hidden');
                 previewEl.innerHTML = `
-    <div class="email-preview-card">
+    < div class="email-preview-card" >
                         <div class="email-subject"><strong>Subject:</strong> ${emailResult.subject}</div>
                         <div class="email-body">${emailResult.email.substring(0, 300)}...</div>
                         <div class="email-actions">
                             <button class="btn btn-small copy-email-btn">📋 Copy Full Email</button>
                             <button class="btn btn-small view-email-btn">👁️ View Full</button>
                         </div>
-                    </div>
+                    </div >
     `;
 
                 // Copy email handler
@@ -1256,14 +1294,14 @@ const App = {
             if (emailResult) {
                 previewEl.classList.remove('hidden');
                 previewEl.innerHTML = `
-    <div class="email-preview-card termination">
+    < div class="email-preview-card termination" >
                         <div class="email-subject"><strong>Subject:</strong> ${emailResult.subject}</div>
                         <div class="email-body">${emailResult.email.substring(0, 300)}...</div>
                         <div class="email-actions">
                             <button class="btn btn-small copy-email-btn">📋 Copy Full Email</button>
                             <button class="btn btn-small view-email-btn">👁️ View Full</button>
                         </div>
-                    </div>
+                    </div >
     `;
 
                 // Copy email handler
@@ -1295,7 +1333,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.innerHTML = `
-    <div class="modal glass email-modal">
+    < div class="modal glass email-modal" >
                 <div class="modal-header">
                     <h3>📧 ${emailResult.subject}</h3>
                     <button class="modal-close">&times;</button>
@@ -1307,7 +1345,7 @@ const App = {
                     <button class="btn btn-primary copy-all-btn">📋 Copy to Clipboard</button>
                     <button class="btn btn-secondary close-btn">Close</button>
                 </div>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(modal);
@@ -1347,13 +1385,13 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'emergency-stop-overlay';
         overlay.innerHTML = `
-    <div class="emergency-content">
+    < div class="emergency-content" >
                 <div class="stop-icon">🛑</div>
                 <h1>SESSION STOPPED</h1>
                 <p class="stop-reason">${reason || 'Critical threshold reached'}</p>
                 <div class="stop-time">${new Date().toLocaleTimeString()}</div>
                 <button class="btn btn-large acknowledge-btn">Acknowledge & End Session</button>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(overlay);
@@ -1384,11 +1422,11 @@ const App = {
         const toast = document.createElement('div');
         toast.className = 'incident-toast glass';
         toast.innerHTML = `
-    <div class="toast-header">
+    < div class="toast-header" >
                 <span class="icon">${analysis.source === 'ai' ? '🤖' : '📊'}</span>
                 <span>Incident Logged - ${analysis.source === 'ai' ? 'AI Recommendation' : 'Standard Response'}</span>
                 <button class="toast-close">&times;</button>
-            </div>
+            </div >
     <div class="toast-body">
         <div class="rec-item">
             <strong>Immediate Action:</strong> ${analysis.recommendedStep}
@@ -1421,12 +1459,12 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'break-overlay';
         overlay.innerHTML = `
-    <div class="break-timer-display glass">
+    < div class="break-timer-display glass" >
                 <h2>Reset Break</h2>
                 <div class="break-countdown">${Utils.formatDuration(duration)}</div>
                 <p>Take a breath. Reset expectations.</p>
                 <button class="btn btn-secondary" id="endBreakBtn">End Early</button>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(overlay);
@@ -1475,7 +1513,7 @@ const App = {
         // Update counters if on session page
         if (this.currentPage === 'session') {
             const { incident } = data;
-            const countEl = document.querySelector(`.quick-log-btn[data-category="${incident.category}"] .count`);
+            const countEl = document.querySelector(`.quick - log - btn[data - category="${incident.category}"] .count`);
             if (countEl) {
                 countEl.textContent = parseInt(countEl.textContent) + 1;
             }
@@ -1487,6 +1525,9 @@ const App = {
                     listEl.innerHTML = this.renderRecentIncidents(summary.incidents.slice(-5));
                 });
             }
+
+            // Update recommendation panel dynamically without full refresh
+            this.updateRecommendationPanel();
         }
     },
 
@@ -1499,7 +1540,7 @@ const App = {
         const rules = Methodology.getRules(band);
 
         main.innerHTML = `
-    <div class="page-rules">
+    < div class="page-rules" >
                 <div class="rules-header glass">
                     <h2>Universal Session Rules</h2>
                     <p>These rules apply to all tutoring sessions.</p>
@@ -1530,18 +1571,18 @@ const App = {
                         📺 Show Fullscreen Rules Card
                     </button>
                 </div>
-            </div>
+            </div >
     `;
 
         // Band selector
         document.getElementById('ruleBandSelect')?.addEventListener('change', (e) => {
             const newRules = Methodology.getRules(e.target.value);
             document.getElementById('rulesGrid').innerHTML = newRules.map(r => `
-    <div class="rule-card glass">
+    < div class="rule-card glass" >
                     <span class="rule-icon">${r.icon}</span>
                     <h3>${r.rule}</h3>
                     <p>${r.description}</p>
-                </div>
+                </div >
     `).join('');
         });
 
@@ -1560,7 +1601,7 @@ const App = {
         const overlay = document.createElement('div');
         overlay.className = 'fullscreen-overlay';
         overlay.innerHTML = `
-    <div class="fullscreen-rules">
+    < div class="fullscreen-rules" >
                 <h1>📚 Session Rules</h1>
                 <div class="fullscreen-rules-grid">
                     ${rules.map(r => `
@@ -1571,7 +1612,7 @@ const App = {
                     `).join('')}
                 </div>
                 <p class="fullscreen-cta">Let's have a great session! 🌟</p>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(overlay);
@@ -1604,7 +1645,7 @@ const App = {
         const categories = Methodology.getCategoryKeys();
 
         main.innerHTML = `
-    <div class="page-methodology">
+    < div class="page-methodology" >
                 <div class="methodology-header glass">
                     <h2>Discipline Methodology</h2>
                     <p>Grade-aware discipline ladder system with escalation paths and scripts.</p>
@@ -1619,7 +1660,7 @@ const App = {
                 <div class="methodology-content" id="methodologyContent">
                     ${this.renderMethodologyBands(config)}
                 </div>
-            </div>
+            </div >
     `;
 
         // Tab handlers
@@ -1646,7 +1687,7 @@ const App = {
 
     renderMethodologyBands(config) {
         return `
-    <div class="bands-grid">
+    < div class="bands-grid" >
         ${Object.entries(config.gradeBands).map(([key, band]) => `
                     <div class="band-card glass band-${key.toLowerCase()}">
                         <h3>Band ${key}: ${band.name}</h3>
@@ -1660,13 +1701,13 @@ const App = {
                     </div>
                 `).join('')
             }
-            </div>
+            </div >
     `;
     },
 
     renderMethodologyCategories(config) {
         return `
-    <div class="categories-accordion">
+    < div class="categories-accordion" >
         ${Object.entries(config.categories).map(([key, cat]) => `
                     <details class="category-item glass">
                         <summary>
@@ -1707,16 +1748,16 @@ const App = {
                     </details>
                 `).join('')
             }
-            </div>
+            </div >
     `;
     },
 
     renderMethodologySeverity(config) {
         return `
-    <div class="severity-intro glass" style="margin-bottom: var(--space-4); padding: var(--space-4);">
+    < div class="severity-intro glass" style = "margin-bottom: var(--space-4); padding: var(--space-4);" >
                 <h3 style="margin-bottom: var(--space-2);">Formal Severity Definitions</h3>
                 <p style="color: var(--text-secondary); margin: 0;">Severity levels are age-agnostic. Only the <em>mapping</em> of behaviors to levels changes by grade.</p>
-            </div>
+            </div >
     <div class="severity-grid">
         ${Object.entries(config.severityLevels).map(([level, info]) => `
                     <div class="severity-card glass" style="border-color: ${info.color}">
@@ -1770,7 +1811,7 @@ const App = {
         });
 
         main.innerHTML = `
-            <div class="page-incidents">
+    < div class="page-incidents" >
                 <div class="incidents-header glass">
                     <h2>Incident History</h2>
                     <div class="incidents-filters">
@@ -1796,8 +1837,8 @@ const App = {
                 <div class="incidents-by-student" id="incidentsByStudent">
                     ${this.renderIncidentsByStudent(incidentsByStudent, students)}
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         // Filter handlers
         const applyFilters = async () => {
@@ -1866,7 +1907,7 @@ const App = {
             const unresolvedCount = studentIncidents.filter(i => !i.resolved).length;
 
             return `
-                <div class="student-incidents-section glass" data-student-id="${studentId}">
+    < div class="student-incidents-section glass" data - student - id="${studentId}" >
                     <div class="student-header">
                         <div class="student-info">
                             <h3>${Utils.escapeHTML(studentName)}</h3>
@@ -1884,8 +1925,8 @@ const App = {
                     <div class="student-incidents-table">
                         ${this.renderIncidentsList(studentIncidents)}
                     </div>
-                </div>
-            `;
+                </div >
+    `;
         }).join('');
     },
 
@@ -1958,7 +1999,7 @@ const App = {
         });
 
         return `
-    < !DOCTYPE html>
+    < !DOCTYPE html >
         <html>
             <head>
                 <title>Incident Report - ${Utils.escapeHTML(student.name)}</title>
@@ -2055,7 +2096,7 @@ const App = {
         }
 
         return `
-    <table class="incidents-table">
+    < table class="incidents-table" >
                 <thead>
                     <tr>
                         <th>Date/Time</th>
@@ -2080,7 +2121,7 @@ const App = {
                         `;
         }).join('')}
                 </tbody>
-            </table>
+            </table >
     `;
     },
 
@@ -2097,7 +2138,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop';
         modal.innerHTML = `
-    <div class="modal modal-large glass">
+    < div class="modal modal-large glass" >
                 <div class="modal-header">
                     <h3>${detail.categoryIcon} ${detail.categoryLabel}</h3>
                     <button class="modal-close">&times;</button>
@@ -2157,7 +2198,7 @@ const App = {
                     ` : ''}
                     <button class="btn btn-secondary modal-cancel">Close</button>
                 </div>
-            </div>
+            </div >
     `;
 
         document.body.appendChild(modal);
@@ -2187,7 +2228,7 @@ const App = {
         const patterns = Incidents.analyzePatterns(allIncidents);
 
         main.innerHTML = `
-    <div class="page-reports">
+    < div class="page-reports" >
                 <div class="reports-header glass">
                     <h2>Reports & Insights</h2>
                 </div>
@@ -2255,7 +2296,7 @@ const App = {
                         </div>
                     </div>
                 </div>
-            </div>
+            </div >
     `;
 
         // Report handlers
@@ -2307,7 +2348,7 @@ const App = {
         const settings = await DB.getSettings();
 
         main.innerHTML = `
-    <div class="page-settings">
+    < div class="page-settings" >
         <div class="settings-section glass">
             <h2>⚙️ Settings</h2>
 
@@ -2359,7 +2400,7 @@ const App = {
 
             <button id="saveSettingsBtn" class="btn btn-primary btn-large">Save Settings</button>
         </div>
-            </div>
+            </div >
     `;
 
         // Save settings
@@ -2442,7 +2483,7 @@ const App = {
         const modal = document.createElement('div');
         modal.className = 'ai-modal';
         modal.innerHTML = `
-    <div class="ai-modal-content glass">
+    < div class="ai-modal-content glass" >
                 <div class="ai-modal-header">
                     <h3>✨ ${title}</h3>
                     <button class="close-btn">&times;</button>
@@ -2451,7 +2492,7 @@ const App = {
                     ${content}
                 </div>
                 ${footer ? `<div class="ai-modal-footer">${footer}</div>` : ''}
-            </div>
+            </div >
     `;
 
         document.body.appendChild(modal);
@@ -2477,10 +2518,10 @@ const App = {
      */
     showAILoading(title) {
         return this.showAIModal(title, `
-    <div class="ai-loading">
+    < div class="ai-loading" >
                 <div class="spinner"></div>
                 <p>AI is thinking...</p>
-            </div>
+            </div >
     `);
     },
 
@@ -2510,7 +2551,7 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI is currently unavailable. Try these steps:</p>
                     <ul style="text-align:left">
@@ -2519,16 +2560,16 @@ const App = {
                         <li>Ask: "What do you need right now?"</li>
                         <li>Consider a short break</li>
                     </ul>
-                </div>
+                </div >
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-response-card" style="margin-top: 1.5rem;">
+    < div class="ai-response-card" style = "margin-top: 1.5rem;" >
                 <h4>🚨 Immediate Action</h4>
                 <p><strong>${result.immediateAction}</strong></p>
-            </div>
+            </div >
             
             <div class="ai-script-item neutral">
                 <div class="tone-label">Say This</div>
@@ -2584,18 +2625,18 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI prep briefing unavailable. No prior incidents to analyze.</p>
-                </div>
+                </div >
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}">
+    < div class="risk-indicator ${result.riskLevel?.toLowerCase() || 'low'}" >
         Risk Level: ${result.riskLevel || 'Low'}
-            </div>
+            </div >
 
     ${result.keyPatterns?.length ? `
             <div class="ai-response-card" style="margin-top: 1.5rem;">
@@ -2656,16 +2697,16 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI goal suggestions unavailable.</p>
-                </div>
+                </div >
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-goals-list">
+    < div class="ai-goals-list" >
         <div class="ai-goal-item primary" onclick="this.classList.toggle('selected')">
             <div class="goal-check">✓</div>
             <div class="goal-text">
@@ -2692,7 +2733,7 @@ const App = {
                     </div>
                 `).join('') || ''
             }
-            </div>
+            </div >
 
     ${result.rationale ? `
             <div class="insight-item" style="margin-top: 1rem;">
@@ -2709,7 +2750,7 @@ const App = {
         modal.querySelector('.ai-modal-footer')?.remove();
         const footer = document.createElement('div');
         footer.className = 'ai-modal-footer';
-        footer.innerHTML = `< button class="btn btn-primary" id = "applyGoalsBtn"> Apply Selected Goals</button> `;
+        footer.innerHTML = `< button class="btn btn-primary" id = "applyGoalsBtn" > Apply Selected Goals</button > `;
         modal.querySelector('.ai-modal-content').appendChild(footer);
 
         footer.querySelector('#applyGoalsBtn').addEventListener('click', () => {
@@ -2745,18 +2786,18 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI summary generation unavailable.</p>
-                </div>
+                </div >
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}">
+    < div class="risk-indicator ${result.overallRating === 'excellent' ? 'low' : result.overallRating === 'good' ? 'low' : result.overallRating === 'challenging' ? 'medium' : 'high'}" >
         Session Rating: ${result.overallRating?.charAt(0).toUpperCase() + result.overallRating?.slice(1)}
-            </div>
+            </div >
 
     <div class="ai-response-card" style="margin-top: 1.5rem;">
         <h4>📋 Summary</h4>
@@ -2807,18 +2848,18 @@ const App = {
 
         if (!result) {
             modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="ai-unavailable">
+    < div class="ai-unavailable" >
                     <div class="icon">🤖</div>
                     <p>AI pattern analysis unavailable or insufficient data.</p>
-                </div>
+                </div >
     `;
             return;
         }
 
         modal.querySelector('.ai-modal-body').innerHTML = `
-    <div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}">
+    < div class="risk-indicator ${result.overallTrend === 'improving' ? 'low' : result.overallTrend === 'stable' ? 'medium' : 'high'}" >
         Trend: ${result.overallTrend?.charAt(0).toUpperCase() + result.overallTrend?.slice(1)}
-            </div>
+            </div >
 
     <p style="margin: 1rem 0;">${result.trendSummary}</p>
             

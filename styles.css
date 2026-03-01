@@ -66,12 +66,12 @@
 
     /* Borders & Radius */
     --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
     --radius-xl: 1rem;
     --radius-full: 9999px;
 
-    --border-color: rgba(148, 163, 184, 0.2);
+    --border-color: rgba(255, 255, 255, 0.08);
 
     /* Shadows */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -80,9 +80,9 @@
     --shadow-glow: 0 0 20px var(--accent-glow);
 
     /* Transitions */
-    --transition-fast: 150ms ease;
-    --transition-base: 200ms ease;
-    --transition-slow: 300ms ease;
+    --transition-fast: 100ms ease-out;
+    --transition-base: 150ms ease-out;
+    --transition-slow: 250ms ease-out;
 }
 
 /* ========================================
@@ -99,6 +99,7 @@
 html {
     font-size: 16px;
     scroll-behavior: smooth;
+    overflow-y: scroll;
 }
 
 body {
@@ -260,6 +261,11 @@ a:hover {
     transition: all var(--transition-base);
 }
 
+.btn:active:not(:disabled) {
+    transform: scale(0.96);
+    opacity: 0.9;
+}
+
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -360,7 +366,7 @@ a:hover {
 .form-control:focus {
     outline: none;
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 3px var(--accent-glow);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
 }
 
 .form-control::placeholder {
@@ -2693,7 +2699,7 @@ tr.incident-row:hover {
     text-transform: uppercase;
     letter-spacing: 8px;
     margin-bottom: var(--space-4);
-    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .emergency-content .stop-reason {

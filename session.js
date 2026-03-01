@@ -9,6 +9,9 @@ const Session = {
     timer: null,
     timerSeconds: 0,
     timerRunning: false,
+    accumulatedSeconds: 0,
+    startTimeMs: 0,
+    visibilityHandlerSetup: false,
 
     /**
      * Initialize session module
@@ -19,8 +22,31 @@ const Session = {
         if (activeSession) {
             this.currentSession = activeSession;
             this.currentStudent = await DB.getStudent(activeSession.studentId);
-            this.timerSeconds = Math.floor((Date.now() - activeSession.startTime) / 1000);
+
+            // Restore timer state from localStorage to handle pauses across reloads
+            const savedStateStr = localStorage.getItem(`timer_${activeSession.id}`);
+            if (savedStateStr) {
+                try {
+                    const savedState = JSON.parse(savedStateStr);
+                    this.accumulatedSeconds = savedState.accumulatedSeconds || 0;
+                    if (savedState.timerRunning) {
+                        const elapsed = Math.floor((Date.now() - savedState.startTimeMs) / 1000);
+                        this.accumulatedSeconds += elapsed;
+                        this.timerSeconds = this.accumulatedSeconds;
+                        this.startTimer();
+                    } else {
+                        this.timerSeconds = this.accumulatedSeconds;
+                    }
+                } catch (e) {
+                    this.accumulatedSeconds = Math.floor((Date.now() - activeSession.startTime) / 1000);
+                    this.timerSeconds = this.accumulatedSeconds;
+                }
+            } else {
+                this.accumulatedSeconds = Math.floor((Date.now() - activeSession.startTime) / 1000);
+                this.timerSeconds = this.accumulatedSeconds;
+            }
         }
+        this.setupVisibilityHandler();
     },
 
     /**
@@ -62,6 +88,7 @@ const Session = {
 
         // Start timer
         this.timerSeconds = 0;
+        this.accumulatedSeconds = 0;
         this.startTimer();
 
         Utils.EventBus.emit('session:started', {
@@ -86,9 +113,16 @@ const Session = {
         Utils.EventBus.emit('session:ended', { session });
 
         const endedSession = this.currentSession;
+
+        // Clean up stored timer state
+        if (endedSession) {
+            localStorage.removeItem(`timer_${endedSession.id}`);
+        }
+
         this.currentSession = null;
         this.currentStudent = null;
         this.timerSeconds = 0;
+        this.accumulatedSeconds = 0;
 
         return endedSession;
     },
@@ -100,11 +134,15 @@ const Session = {
         if (this.timerRunning) return;
 
         this.timerRunning = true;
+        this.startTimeMs = Date.now();
+        this.saveTimerState();
+
+        // Use frequent interval, but calculate exact elapsed time
         this.timer = setInterval(() => {
-            this.timerSeconds++;
-            Utils.EventBus.emit('session:timerTick', { seconds: this.timerSeconds });
+            this.updateTimerFromTimestamp();
         }, 1000);
 
+        this.updateTimerFromTimestamp(); // Update immediately
         Utils.EventBus.emit('session:timerStarted', { seconds: this.timerSeconds });
     },
 
@@ -120,6 +158,10 @@ const Session = {
             this.timer = null;
         }
 
+        const elapsedSinceStart = Math.floor((Date.now() - this.startTimeMs) / 1000);
+        this.accumulatedSeconds += elapsedSinceStart;
+        this.saveTimerState();
+
         Utils.EventBus.emit('session:timerPaused', { seconds: this.timerSeconds });
     },
 
@@ -129,6 +171,50 @@ const Session = {
     stopTimer() {
         this.pauseTimer();
         this.timerSeconds = 0;
+        this.accumulatedSeconds = 0;
+    },
+
+    /**
+     * Update timer logic from absolute timestamps
+     */
+    updateTimerFromTimestamp() {
+        if (!this.timerRunning) return;
+        const currentMs = Date.now();
+        const elapsedSinceStart = Math.floor((currentMs - this.startTimeMs) / 1000);
+        const newTimerSeconds = this.accumulatedSeconds + elapsedSinceStart;
+
+        if (newTimerSeconds !== this.timerSeconds) {
+            this.timerSeconds = newTimerSeconds;
+            this.saveTimerState();
+            Utils.EventBus.emit('session:timerTick', { seconds: this.timerSeconds });
+        }
+    },
+
+    /**
+     * Save timer state to localStorage for persistence across reloads
+     */
+    saveTimerState() {
+        if (!this.currentSession) return;
+        const state = {
+            accumulatedSeconds: this.accumulatedSeconds,
+            timerRunning: this.timerRunning,
+            startTimeMs: this.startTimeMs
+        };
+        localStorage.setItem(`timer_${this.currentSession.id}`, JSON.stringify(state));
+    },
+
+    /**
+     * Set up visibility handler for background tab tracking
+     */
+    setupVisibilityHandler() {
+        if (this.visibilityHandlerSetup) return;
+        this.visibilityHandlerSetup = true;
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && this.timerRunning) {
+                this.updateTimerFromTimestamp();
+            }
+        });
     },
 
     /**
@@ -144,7 +230,6 @@ const Session = {
 
     /**
      * Get formatted timer display
-     * @returns {string} Formatted time
      */
     getTimerDisplay() {
         return Utils.formatDuration(this.timerSeconds);
